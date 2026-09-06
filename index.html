@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>台灣產業登記分析</title>
+<style>
+:root{
+  color-scheme: light;
+  --surface-0:#f4f3f0; --surface-1:#fcfcfb; --surface-2:#ffffff;
+  --ink-1:#0b0b0b; --ink-2:#52514e; --ink-3:#8a8983;
+  --rule:#e2e1dc; --rule-2:#efeee9;
+  --nav:#14243c; --nav-ink:#e8eaef; --nav-ink-2:#9aa6ba;
+  --pos:#2a78d6; --neg:#e34948; --accent:#1baf7a; --warn:#eda100;
+  --seq-1:#86b6ef; --seq-2:#5598e7; --seq-3:#2a78d6; --seq-4:#1c5cab;
+  --seq-5:#104281;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.1);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --surface-0:#101010; --surface-1:#1a1a19; --surface-2:#212120;
+    --ink-1:#ffffff; --ink-2:#c3c2b7; --ink-3:#8f8e86;
+    --rule:#33332f; --rule-2:#282826;
+    --nav:#0c1728; --nav-ink:#e8eaef; --nav-ink-2:#8b98ad;
+    --pos:#3987e5; --neg:#e66767; --accent:#199e70; --warn:#c98500;
+    --seq-1:#184f95; --seq-2:#256abf; --seq-3:#3987e5; --seq-4:#6da7ec;
+    --seq-5:#b7d3f6;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --surface-0:#101010; --surface-1:#1a1a19; --surface-2:#212120;
+  --ink-1:#ffffff; --ink-2:#c3c2b7; --ink-3:#8f8e86;
+  --rule:#33332f; --rule-2:#282826;
+  --nav:#0c1728; --nav-ink:#e8eaef; --nav-ink-2:#8b98ad;
+  --pos:#3987e5; --neg:#e66767; --accent:#199e70; --warn:#c98500;
+  --seq-1:#184f95; --seq-2:#256abf; --seq-3:#3987e5; --seq-4:#6da7ec;
+  --seq-5:#b7d3f6;
+  --shadow:0 1px 2px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface-0);color:var(--ink-1);
+  font:14px/1.5 "Noto Sans TC","PingFang TC","Microsoft JhengHei",-apple-system,
+       "Segoe UI",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+
+/* ── 版面 ─────────────────────────────────────────── */
+header{background:var(--nav);color:var(--nav-ink);padding:14px 24px 0;
+  position:sticky;top:0;z-index:50}
+.brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
+  padding-bottom:12px}
+.brand h1{font-size:16px;font-weight:650;margin:0;letter-spacing:.02em}
+.brand .sub{font-size:12px;color:var(--nav-ink-2)}
+.brand .spacer{flex:1}
+.brand button{background:transparent;border:1px solid #ffffff2e;color:var(--nav-ink);
+  border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:inherit}
+.brand button:hover{background:#ffffff14}
+nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{background:transparent;border:0;border-bottom:2px solid transparent;
+  color:var(--nav-ink-2);padding:9px 14px;font-size:13px;cursor:pointer;
+  white-space:nowrap;font-family:inherit;font-weight:500}
+nav button:hover{color:var(--nav-ink)}
+nav button[aria-selected="true"]{color:#fff;border-bottom-color:var(--pos)}
+nav button .n{font-size:10px;opacity:.55;margin-right:5px;font-variant-numeric:tabular-nums}
+
+.wrap{display:grid;grid-template-columns:260px 1fr;gap:0;align-items:start}
+@media(max-width:1000px){.wrap{grid-template-columns:1fr}}
+
+/* ── 篩選側欄 ──────────────────────────────────────── */
+aside{background:var(--surface-1);border-right:1px solid var(--rule);
+  padding:18px 16px 60px;position:sticky;top:88px;max-height:calc(100vh - 88px);
+  overflow-y:auto}
+@media(max-width:1000px){aside{position:static;max-height:none;border-right:0;
+  border-bottom:1px solid var(--rule)}}
+aside h2{font-size:11px;text-transform:uppercase;letter-spacing:.09em;
+  color:var(--ink-3);margin:0 0 14px;font-weight:650}
+.fgroup{margin-bottom:18px}
+.fgroup>label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);
+  margin-bottom:6px}
+select,input[type=text],input[type=number]{width:100%;padding:6px 8px;
+  border:1px solid var(--rule);border-radius:6px;background:var(--surface-2);
+  color:var(--ink-1);font:13px/1.4 inherit;font-family:inherit}
+input:focus,select:focus{outline:2px solid var(--pos);outline-offset:-1px}
+.seg{display:flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+.seg button{flex:1;background:var(--surface-2);border:0;padding:6px 4px;font-size:13px;
+  cursor:pointer;color:var(--ink-2);font-family:inherit}
+.seg button[aria-pressed="true"]{background:var(--pos);color:#fff;font-weight:600}
+.picker{border:1px solid var(--rule);border-radius:6px;background:var(--surface-2)}
+.picker .search{border:0;border-bottom:1px solid var(--rule-2);border-radius:6px 6px 0 0}
+.picker .list{max-height:210px;overflow-y:auto;padding:2px}
+.picker .list label{display:flex;gap:7px;align-items:center;padding:4px 6px;
+  font-size:12.5px;border-radius:4px;cursor:pointer;line-height:1.3}
+.picker .list label:hover{background:var(--rule-2)}
+.picker .list input{margin:0;flex-shrink:0;accent-color:var(--pos)}
+.picker .list .cnt{margin-left:auto;color:var(--ink-3);font-size:11px;
+  font-variant-numeric:tabular-nums;flex-shrink:0}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.chip{background:var(--pos);color:#fff;border-radius:11px;padding:2px 7px;
+  font-size:11px;display:inline-flex;align-items:center;gap:4px}
+.chip button{background:none;border:0;color:#fff;cursor:pointer;padding:0;
+  font-size:13px;line-height:1;opacity:.8}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hint{font-size:11px;color:var(--ink-3);margin-top:5px;line-height:1.45}
+.btn{width:100%;padding:8px;border-radius:6px;border:1px solid var(--rule);
+  background:var(--surface-2);color:var(--ink-2);font-size:13px;cursor:pointer;
+  font-family:inherit}
+.btn:hover{background:var(--rule-2)}
+.btn.primary{background:var(--pos);border-color:var(--pos);color:#fff;font-weight:600}
+
+/* ── 內容 ─────────────────────────────────────────── */
+main{padding:22px 26px 80px;min-width:0}
+.page{display:none}.page.on{display:block}
+.phead{margin-bottom:18px}
+.phead h2{font-size:20px;margin:0 0 4px;letter-spacing:-.01em;font-weight:680}
+.phead p{margin:0;color:var(--ink-2);font-size:13px;max-width:78ch}
+
+.card{background:var(--surface-2);border:1px solid var(--rule);border-radius:10px;
+  padding:16px 18px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card>h3{font-size:13.5px;margin:0 0 2px;font-weight:650}
+.card>.cap{font-size:12px;color:var(--ink-3);margin:0 0 14px}
+
+.kpis{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));
+  margin-bottom:14px}
+.kpi{background:var(--surface-2);border:1px solid var(--rule);border-radius:10px;
+  padding:13px 15px;box-shadow:var(--shadow)}
+.kpi .k{font-size:11px;color:var(--ink-3);letter-spacing:.03em;margin-bottom:5px;
+  font-weight:600;text-transform:uppercase}
+.kpi .v{font-size:25px;font-weight:660;letter-spacing:-.025em;line-height:1.1;
+  font-variant-numeric:tabular-nums}
+.kpi .d{font-size:11.5px;color:var(--ink-2);margin-top:3px}
+.kpi .d.up{color:var(--pos)}.kpi .d.dn{color:var(--neg)}
+
+.insight{background:var(--surface-1);border-left:3px solid var(--pos);
+  border-radius:0 7px 7px 0;padding:11px 14px;font-size:13px;color:var(--ink-2);
+  margin-top:12px;line-height:1.6}
+.insight b{color:var(--ink-1);font-weight:640}
+
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);
+  margin-bottom:10px}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:7px 9px;text-align:right;border-bottom:1px solid var(--rule-2);
+  white-space:nowrap}
+th{color:var(--ink-3);font-weight:600;font-size:11px;text-transform:uppercase;
+  letter-spacing:.04em;position:sticky;top:0;background:var(--surface-2);
+  cursor:pointer;user-select:none}
+th:first-child,td:first-child{text-align:left}
+td.t{text-align:left}
+tbody tr:hover{background:var(--rule-2)}
+.tw{overflow:auto;max-height:560px;border:1px solid var(--rule);border-radius:8px}
+.bar-cell{position:relative}
+.bar-cell i{position:absolute;left:0;top:50%;transform:translateY(-50%);
+  height:15px;background:var(--seq-2);border-radius:0 3px 3px 0;z-index:0;opacity:.55}
+.bar-cell span{position:relative;z-index:1}
+
+svg{display:block;width:100%;overflow:visible}
+.gridline{stroke:var(--rule-2);stroke-width:1}
+.axis{stroke:var(--rule);stroke-width:1}
+.axis-t{fill:var(--ink-3);font-size:10.5px;font-variant-numeric:tabular-nums}
+.axis-l{fill:var(--ink-2);font-size:11px}
+.dlabel{fill:var(--ink-1);font-size:11px;font-weight:600;
+  font-variant-numeric:tabular-nums}
+.hit{fill:transparent;cursor:pointer}
+.scroll-x{overflow-x:auto}
+
+#tip{position:fixed;pointer-events:none;z-index:200;background:var(--surface-2);
+  border:1px solid var(--rule);border-radius:7px;padding:8px 11px;font-size:12px;
+  box-shadow:0 4px 14px rgba(16,24,40,.14);opacity:0;transition:opacity .1s;
+  max-width:260px}
+#tip.on{opacity:1}
+#tip .th{font-weight:660;margin-bottom:5px;font-size:12.5px}
+#tip .tr{display:flex;gap:12px;justify-content:space-between;line-height:1.65}
+#tip .tr b{font-variant-numeric:tabular-nums;font-weight:600}
+#tip i{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:5px}
+
+.loading{padding:44px;text-align:center;color:var(--ink-3);font-size:13px}
+.err{padding:14px;background:#e3494812;border:1px solid var(--neg);
+  border-radius:8px;color:var(--neg);font-size:13px}
+.note{font-size:12px;color:var(--ink-3);margin-top:9px;line-height:1.5}
+.grid2{display:grid;gap:14px;grid-template-columns:1fr 1fr}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;
+  margin-top:11px;font-size:12.5px;color:var(--ink-2)}
+.pager button{padding:5px 11px;border:1px solid var(--rule);border-radius:6px;
+  background:var(--surface-2);cursor:pointer;color:var(--ink-2);font-family:inherit}
+.pager button:disabled{opacity:.4;cursor:default}
+.quad-lbl{fill:var(--ink-3);font-size:10.5px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.05em}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>台灣產業登記分析</h1>
+    <span class="sub" id="sub">載入中…</span>
+    <span class="spacer"></span>
+    <button id="theme">◐ 深色</button>
+  </div>
+  <nav id="nav"></nav>
+</header>
+
+<div class="wrap">
+<aside>
+  <h2>分析範圍</h2>
+
+  <div class="fgroup">
+    <label>登記別</label>
+    <div class="seg" id="kind">
+      <button data-v="公司" aria-pressed="true">公司</button>
+      <button data-v="商業" aria-pressed="false">行號</button>
+    </div>
+    <div class="hint" id="kindHint">公司登記：有資本額與完整解散日期</div>
+  </div>
+
+  <div class="fgroup">
+    <label>產業別 <span class="hint" style="font-weight:400">（不選＝全部）</span></label>
+    <div class="picker">
+      <input class="search" type="text" id="indSearch" placeholder="搜尋產業…">
+      <div class="list" id="indList"></div>
+    </div>
+    <div class="chips" id="indChips"></div>
+  </div>
+
+  <div class="fgroup">
+    <label>縣市</label>
+    <div class="picker">
+      <div class="list" id="cityList" style="max-height:150px"></div>
+    </div>
+  </div>
+
+  <div class="fgroup">
+    <label>觀察期間</label>
+    <div class="row2">
+      <select id="yFrom"></select>
+      <select id="yTo"></select>
+    </div>
+    <div class="hint">登記清冊自 2013-02 起，2013 年以前的年度存量無法回推。</div>
+  </div>
+
+  <div class="fgroup">
+    <label>營運狀態</label>
+    <div class="seg" id="susp">
+      <button data-v="" aria-pressed="true">全部</button>
+      <button data-v="operating" aria-pressed="false">營業中</button>
+      <button data-v="suspended" aria-pressed="false">停業</button>
+      <button data-v="inactive" aria-pressed="false">非營業</button>
+    </div>
+    <div class="hint">依財政部稅籍狀態，比商業司的登記狀態更貼近實際。
+      停業是暫時的、可復業，和「解散」不同。</div>
+  </div>
+
+  <div class="fgroup" id="capGroup">
+    <label>資本額級距 <span class="hint" style="font-weight:400">（不選＝全部）</span></label>
+    <div class="picker"><div class="list" id="bandList" style="max-height:none"></div></div>
+  </div>
+
+  <div class="fgroup">
+    <button class="btn primary" id="apply">套用篩選</button>
+    <button class="btn" id="reset" style="margin-top:7px">重設</button>
+  </div>
+</aside>
+
+<main id="main"></main>
+</div>
+
+<footer style="padding:22px 26px 46px;color:var(--ink-3);font-size:12px;
+               border-top:1px solid var(--rule);line-height:1.7">
+  <b style="color:var(--ink-2)">資料來源</b>：
+  經濟部商業司「商工行政資料開放平臺」公司／商業登記資料、
+  財政部財政資訊中心「全國營業(稅籍)登記資料集」。
+  依政府資料開放授權條款（Open Government Data License）第 1 版利用。<br>
+  <span id="footnote"></span><br>
+  本頁為靜態版：資料經預先聚合，僅提供彙總分析，不含個別公司明細。
+  存續與退場的年度計算自 2013 年起（登記清冊最早回溯至 2013-02），更早年份無法回推。
+</footer>
+<div id="tip"></div>
+
+<script type="module">
+"use strict";
+import * as duckdb from 'https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.29.0/+esm';
+"use strict";
+const $ = (s,r=document)=>r.querySelector(s);
+const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
+const SEQ = ['--seq-1','--seq-2','--seq-3','--seq-4','--seq-5'];
+const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+const nf = new Intl.NumberFormat('zh-TW');
+const fmt  = n => (n==null||isNaN(n)) ? '–' : nf.format(Math.round(n));
+const pct  = (n,d=1) => (n==null||isNaN(n)) ? '–' : (n*100).toFixed(d)+'%';
+const pctv = (n,d=1) => (n==null||isNaN(n)) ? '–' : n.toFixed(d)+'%';
+const sign = n => (n==null||isNaN(n)) ? '–' : (n>0?'+':'')+nf.format(Math.round(n));
+function money(n){
+  if(n==null||isNaN(n)) return '–';
+  const a=Math.abs(n);
+  // 數千億以上再帶小數沒有意義，改成整數加千分位
+  if(a>=1e12) return (n/1e12).toFixed(2)+' 兆';
+  if(a>=1e8){ const v=n/1e8;
+    return (Math.abs(v)>=100 ? nf.format(Math.round(v)) : v.toFixed(1))+' 億'; }
+  if(a>=1e4)  return nf.format(Math.round(n/1e4))+' 萬';
+  return nf.format(n);
+}
+
+
+// ── 狀態 ───────────────────────────────────────────
+const S = {
+  meta:null, kind:'公司', industries:new Set(), cities:new Set(),
+  bands:new Set(), yFrom:2013, yTo:9999, suspend:'',
+  page:'p1', cache:{}
+};
+const filters = () => ({
+  kind:S.kind, industries:[...S.industries], cities:[...S.cities],
+  bands:[...S.bands], year_from:S.yFrom, year_to:S.yTo, suspend:S.suspend
+});
+
+// ── DuckDB-WASM 查詢層 ─────────────────────────────
+// 這一版沒有後端，SQL 直接在瀏覽器裡跑。資料是預先聚合好的 cube，
+// 一列代表「某個產業 × 縣市 × 狀態 × 年份 × 資本級距」的組合與其家數，
+// 所有圖表要的都是 count / sum，所以聚合過的資料就夠用。
+let CONN = null;
+
+async function initDB(say){
+  say('載入查詢引擎…');
+  const bundle = await duckdb.selectBundle(duckdb.getJsDelivrBundles());
+  const wurl = URL.createObjectURL(new Blob(
+    [`importScripts("${bundle.mainWorker}");`], {type:'text/javascript'}));
+  const worker = new Worker(wurl);
+  const db = new duckdb.AsyncDuckDB(
+    new duckdb.ConsoleLogger(duckdb.LogLevel.ERROR), worker);
+  await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+  URL.revokeObjectURL(wurl);
+  CONN = await db.connect();
+
+  say('載入資料（約 10 MB）…');
+  // 直接把檔案抓成 buffer 再交給 DuckDB，不用 registerFileURL。
+  // registerFileURL 走的是 HTTP Range 請求，本機用 python -m http.server
+  // 預覽時不支援 Range 會失敗；資料只有 10 MB，一次下載反而單純又快。
+  const base = new URL('./data/', location.href).href;
+  for(const f of ['cube.parquet','monthly.parquet']){
+    const res = await fetch(base + f);
+    if(!res.ok) throw new Error(`載入 ${f} 失敗（HTTP ${res.status}）`);
+    await db.registerFileBuffer(f, new Uint8Array(await res.arrayBuffer()));
+  }
+  // 資料只有 10 MB，一次讀進記憶體，之後的查詢都不再碰網路
+  await CONN.query(`CREATE TABLE cube AS SELECT * FROM 'cube.parquet'`);
+  await CONN.query(`CREATE TABLE monthly AS SELECT * FROM 'monthly.parquet'`);
+}
+
+const lit = s => "'" + String(s).replace(/'/g, "''") + "'";
+const int = n => Math.trunc(Number(n) || 0);
+
+async function sql(qs){
+  const r = await CONN.query(qs);
+  return r.toArray().map(row => {
+    const o = row.toJSON();
+    for(const k in o){                       // Arrow 的整數是 BigInt，轉回 Number
+      const v = o[k];
+      if(typeof v === 'bigint') o[k] = Number(v);
+    }
+    return o;
+  });
+}
+const one = async qs => (await sql(qs))[0] || {};
+
+// 某年年底是否存活（與後端版本同一套判定）
+const aliveAt = y => `((設立年 <= ${int(y)} OR (設立年 IS NULL AND 狀態組 = '存續'))`
+                   + ` AND (狀態組 = '存續' OR 消滅年 > ${int(y)}))`;
+const SURV5 = `(狀態組 = '存續' OR 消滅年 > 設立年 + 5)`;
+
+// 資本級距，數字要和 build_db 產生 cube 時的分法一致
+const BANDS = [
+  {i:0, label:'100萬以下',    lo:0,     hi:1e6},
+  {i:1, label:'100萬–500萬',  lo:1e6,   hi:5e6},
+  {i:2, label:'500萬–1千萬',  lo:5e6,   hi:1e7},
+  {i:3, label:'1千萬–5千萬',  lo:1e7,   hi:5e7},
+  {i:4, label:'5千萬–1億',    lo:5e7,   hi:1e8},
+  {i:5, label:'1億以上',      lo:1e8,   hi:null},
+  {i:9, label:'未提供',       lo:null,  hi:null},
+];
+
+function whereOf(f, o={}){
+  const c = [`登記別 = ${lit(f.kind)}`];
+  if(o.ind !== false && f.industries.length)
+    c.push(`產業 IN (${f.industries.map(lit).join(',')})`);
+  if(o.city !== false && f.cities.length)
+    c.push(`縣市 IN (${f.cities.map(lit).join(',')})`);
+  if(f.bands.length) c.push(`資本級距 IN (${f.bands.map(int).join(',')})`);
+  if(f.suspend === 'operating')      c.push(`稅籍狀態 = '營業中'`);
+  else if(f.suspend === 'suspended') c.push(`稅籍狀態 = '停業中'`);
+  else if(f.suspend === 'inactive')  c.push(`稅籍狀態 = '非營業中'`);
+  return c.join(' AND ');
+}
+const yearsOf = f => {
+  const lo = Math.max(S.meta.min_year, int(f.year_from));
+  const hi = Math.min(S.meta.max_year, int(f.year_to));
+  const out = [];
+  for(let y = lo; y <= hi; y++) out.push(y);
+  return out.length ? out : [S.meta.max_year];
+};
+
+// 中位數沒辦法二次聚合（各組中位數的中位數不等於整體中位數），
+// 所以改用分組中位數估計：找出中位數落在哪個級距，再在級距內線性插值。
+function groupedMedian(counts){
+  const bs = BANDS.filter(b => b.lo !== null);
+  const tot = bs.reduce((s,b) => s + (counts[b.i]||0), 0);
+  if(!tot) return null;
+  let cum = 0;
+  for(const b of bs){
+    const n = counts[b.i] || 0;
+    if(n && cum + n >= tot/2){
+      const hi = b.hi === null ? b.lo * 3 : b.hi;   // 最高級距沒有上界，估一個
+      return b.lo + (hi - b.lo) * ((tot/2 - cum) / n);
+    }
+    cum += n;
+  }
+  return null;
+}
+async function medianOf(where){
+  const rs = await sql(`SELECT 資本級距 b, sum(n) n FROM cube
+                        WHERE ${where} AND 狀態組 = '存續' GROUP BY 1`);
+  const c = {}; rs.forEach(r => c[r.b] = r.n);
+  return groupedMedian(c);
+}
+
+// ── 各分頁的資料 ───────────────────────────────────
+async function api(ep, extra, body){
+  const f = Object.assign(filters(), body||{});
+  const k = ep + '|' + JSON.stringify(f) + '|' + (extra||'');
+  if(S.cache[k]) return S.cache[k];
+  const j = await QUERY[ep](f);
+  S.cache[k] = j;
+  return j;
+}
+
+const MINY = () => S.meta.min_year, MAXY = () => S.meta.max_year;
+
+const QUERY = {
+
+async overview(f){
+  const w = whereOf(f), years = yearsOf(f), mx = MAXY();
+  const sel = [];
+  years.forEach(y => {
+    sel.push(`sum(n) FILTER (WHERE ${aliveAt(y)}) AS a${y}`);
+    sel.push(`sum(n) FILTER (WHERE 設立年 = ${y}) AS n${y}`);
+    sel.push(`sum(n) FILTER (WHERE 消滅年 = ${y}) AS x${y}`);
+  });
+  sel.push(
+    `sum(n) AS total`,
+    `sum(n) FILTER (WHERE 狀態組 = '存續') AS alive`,
+    `sum(n) FILTER (WHERE 狀態組 = '存續' AND 稅籍狀態 = '停業中') AS suspended`,
+    `sum(n) FILTER (WHERE 狀態組 = '存續' AND 稅籍狀態 = '營業中') AS tax_active`,
+    `sum(n) FILTER (WHERE 狀態組 = '存續' AND 稅籍狀態 = '非營業中') AS tax_inactive`,
+    `sum(n) FILTER (WHERE 狀態組 = '存續' AND 稅籍狀態 = '稅籍查無') AS tax_none`,
+    `sum(cap_sum) FILTER (WHERE 狀態組 = '存續') AS cap_sum`,
+    `sum(n) FILTER (WHERE 設立年 BETWEEN ${MINY()} AND ${mx-5}) AS coh_n`,
+    `sum(n) FILTER (WHERE 設立年 BETWEEN ${MINY()} AND ${mx-5} AND ${SURV5}) AS coh_s`);
+  const row = await one(`SELECT ${sel.join(', ')} FROM cube WHERE ${w}`);
+  const cap_med = await medianOf(w);
+
+  const yearly = years.map(y => ({
+    year:y, alive:row['a'+y]||0, new:row['n'+y]||0, exit:row['x'+y]||0,
+    net:(row['n'+y]||0) - (row['x'+y]||0)}));
+  const last = yearly[yearly.length-1];
+  const prev = yearly.length > 1 ? yearly[yearly.length-2] : last;
+  return {
+    kpi:{
+      total:row.total||0, alive:row.alive||0, suspended:row.suspended||0,
+      tax_inactive:row.tax_inactive||0, tax_none:row.tax_none||0,
+      operating:row.tax_active||0,
+      new_last:last.new, exit_last:last.exit, net_last:last.net,
+      growth_pct: prev.alive ? (last.alive-prev.alive)/prev.alive*100 : null,
+      survival_5y: row.coh_n ? row.coh_s/row.coh_n : null,
+      capital_median:cap_med, capital_sum:row.cap_sum||0, last_year:last.year,
+    }, yearly};
+},
+
+async cohort(f){
+  const w = whereOf(f), mx = MAXY();
+  const lo = Math.max(MINY(), int(f.year_from)), hi = Math.min(mx, int(f.year_to));
+  const rows = await sql(`SELECT 設立年 y0, 消滅年 y1, 狀態組 st, sum(n) n
+    FROM cube WHERE ${w} AND 設立年 BETWEEN ${lo} AND ${hi} GROUP BY 1,2,3`);
+  const by = {};
+  rows.forEach(r => (by[r.y0] = by[r.y0] || []).push(r));
+
+  const cohorts = [];
+  for(let y0 = lo; y0 <= hi; y0++){
+    const rs = by[y0] || [];
+    const size = rs.reduce((s,r) => s + r.n, 0);
+    if(!size) continue;
+    const pts = [];
+    for(let age = 0; y0 + age <= mx; age++){
+      const y = y0 + age;
+      const alive = rs.reduce((s,r) =>
+        s + ((r.st === '存續' || (r.y1 != null && r.y1 > y)) ? r.n : 0), 0);
+      pts.push({age, alive, rate:alive/size});
+    }
+    cohorts.push({year:y0, size, points:pts});
+  }
+  const summary = {};
+  [1,3,5,10].forEach(k => {
+    let tot = 0, al = 0;
+    cohorts.forEach(c => {
+      if(c.year + k <= mx && c.points.length > k){ tot += c.size; al += c.points[k].alive; }
+    });
+    summary[k+'y'] = tot ? al/tot : null;
+  });
+  // 中位存續年數: 用設立年與消滅年的差估算（cube 只到年，精度到年）
+  const life = await sql(`SELECT 消滅年 - 設立年 AS yrs, sum(n) n FROM cube
+    WHERE ${w} AND 設立年 IS NOT NULL AND 消滅年 IS NOT NULL GROUP BY 1 ORDER BY 1`);
+  const tot = life.reduce((s,r) => s + r.n, 0);
+  let cum = 0, med = null;
+  for(const r of life){ cum += r.n; if(cum >= tot/2){ med = r.yrs; break; } }
+  summary.median_life = med;
+  return {cohorts, summary, horizon:mx};
+},
+
+async compare_years(f){
+  const w = whereOf(f);
+  const y0 = Math.max(MINY(), int(f.year_from));
+  const y1 = Math.min(MAXY(), int(f.year_to));
+  const a0 = aliveAt(y0), a1 = aliveAt(y1);
+  const r = await one(`SELECT
+      sum(n) FILTER (WHERE ${a0}) AS n0,
+      sum(n) FILTER (WHERE ${a1}) AS n1,
+      sum(n) FILTER (WHERE ${a0} AND ${a1}) AS survived,
+      sum(n) FILTER (WHERE ${a0} AND NOT ${a1}) AS died,
+      sum(n) FILTER (WHERE NOT ${a0} AND ${a1}) AS born
+    FROM cube WHERE ${w}`);
+  const n0 = r.n0||0;
+  return {n0, n1:r.n1||0, survived:r.survived||0, died:r.died||0, born:r.born||0,
+          year_from:y0, year_to:y1,
+          survival_rate: n0 ? (r.survived||0)/n0 : null};
+},
+
+async flow(f){
+  const w = whereOf(f), years = yearsOf(f);
+  const sel = [];
+  years.forEach(y => {
+    sel.push(`sum(n) FILTER (WHERE ${aliveAt(y)}) AS a${y}`);
+    sel.push(`sum(n) FILTER (WHERE 設立年 = ${y}) AS n${y}`);
+    sel.push(`sum(n) FILTER (WHERE 消滅年 = ${y}) AS x${y}`);
+  });
+  const row = await one(`SELECT ${sel.join(', ')} FROM cube WHERE ${w}`);
+  const out = years.map((y,i) => {
+    const alive = row['a'+y]||0, nw = row['n'+y]||0, ex = row['x'+y]||0;
+    const base = i ? (row['a'+years[i-1]]||0) : alive;
+    return {year:y, alive, new:nw, exit:ex, net:nw-ex,
+      entry_rate: base ? nw/base*100 : null,
+      exit_rate:  base ? ex/base*100 : null,
+      churn:      base ? (nw+ex)/base*100 : null};
+  });
+  // 月度表沒有資本級距與狀態欄位，只吃產業／縣市／登記別的篩選
+  const mc = [`登記別 = ${lit(f.kind)}`];
+  if(f.industries.length) mc.push(`產業 IN (${f.industries.map(lit).join(',')})`);
+  if(f.cities.length) mc.push(`縣市 IN (${f.cities.map(lit).join(',')})`);
+  const monthly = await sql(`SELECT 年月 AS ym,
+      sum(n) FILTER (WHERE 事件 = 'new')  AS new,
+      sum(n) FILTER (WHERE 事件 = 'exit') AS exit
+    FROM monthly WHERE ${mc.join(' AND ')} AND 年月 IS NOT NULL
+    GROUP BY 1 ORDER BY 1`);
+  monthly.forEach(m => { m.new = m.new||0; m.exit = m.exit||0; });
+  return {yearly:out, monthly};
+},
+
+async matrix(f){
+  const w = whereOf(f, {ind:false});
+  const now = MAXY(), base = now - 5;
+  const rows = await sql(`SELECT 產業 AS name,
+      sum(n) FILTER (WHERE ${aliveAt(now)}) AS alive,
+      sum(n) FILTER (WHERE ${aliveAt(base)}) AS alive_base,
+      sum(n) FILTER (WHERE 狀態組 = '存續' AND 稅籍狀態 = '停業中') AS suspended,
+      sum(n) FILTER (WHERE 狀態組 = '存續' AND 稅籍狀態 = '營業中') AS tax_active,
+      sum(n) FILTER (WHERE 設立年 > ${base}) AS new_5y,
+      sum(n) FILTER (WHERE 消滅年 > ${base}) AS exit_5y,
+      sum(n) FILTER (WHERE 設立年 BETWEEN ${MINY()} AND ${now-5}) AS coh_n,
+      sum(n) FILTER (WHERE 設立年 BETWEEN ${MINY()} AND ${now-5} AND ${SURV5}) AS coh_s
+    FROM cube WHERE ${w} GROUP BY 1 HAVING sum(n) >= 30 ORDER BY 2 DESC`);
+  // 資本中位數要分開查，因為它得從級距分布推估
+  const capRows = await sql(`SELECT 產業 AS name, 資本級距 b, sum(n) n FROM cube
+    WHERE ${w} AND 狀態組 = '存續' GROUP BY 1,2`);
+  const capBy = {};
+  capRows.forEach(r => { (capBy[r.name] = capBy[r.name] || {})[r.b] = r.n; });
+  rows.forEach(r => {
+    const b = r.alive_base||0, n = r.alive||0;
+    r.cagr = (b && n) ? (Math.pow(n/b, 0.2) - 1) * 100 : null;
+    r.survival_5y = r.coh_n ? r.coh_s/r.coh_n : null;
+    r.entry_rate = b ? (r.new_5y||0)/b*100 : null;
+    r.exit_rate  = b ? (r.exit_5y||0)/b*100 : null;
+    r.churn      = b ? ((r.new_5y||0)+(r.exit_5y||0))/b*100 : null;
+    r.suspend_rate  = n ? (r.suspended||0)/n*100 : null;
+    r.operating     = r.tax_active||0;
+    r.operating_rate = n ? (r.tax_active||0)/n*100 : null;
+    r.capital_median = groupedMedian(capBy[r.name] || {});
+  });
+  return {items:rows, year_now:now, year_base:base};
+},
+
+async geo(f){
+  const w = whereOf(f, {city:false});
+  const now = MAXY(), base = now - 5;
+  const rows = await sql(`SELECT 縣市 AS city,
+      sum(n) FILTER (WHERE ${aliveAt(now)}) AS alive,
+      sum(n) FILTER (WHERE ${aliveAt(base)}) AS alive_base,
+      sum(n) FILTER (WHERE 狀態組 = '存續' AND 稅籍狀態 = '停業中') AS suspended,
+      sum(n) FILTER (WHERE 狀態組 = '存續' AND 稅籍狀態 = '營業中') AS tax_active,
+      sum(n) FILTER (WHERE 設立年 > ${base}) AS new_5y,
+      sum(n) FILTER (WHERE 消滅年 > ${base}) AS exit_5y,
+      sum(n) FILTER (WHERE 設立年 BETWEEN ${MINY()} AND ${now-5}) AS coh_n,
+      sum(n) FILTER (WHERE 設立年 BETWEEN ${MINY()} AND ${now-5} AND ${SURV5}) AS coh_s
+    FROM cube WHERE ${w} AND 縣市 IS NOT NULL GROUP BY 1 ORDER BY 2 DESC`);
+  const capRows = await sql(`SELECT 縣市 AS city, 資本級距 b, sum(n) n FROM cube
+    WHERE ${w} AND 縣市 IS NOT NULL AND 狀態組 = '存續' GROUP BY 1,2`);
+  const capBy = {};
+  capRows.forEach(r => { (capBy[r.city] = capBy[r.city] || {})[r.b] = r.n; });
+  const tot = rows.reduce((s,r) => s + (r.alive||0), 0) || 1;
+  rows.forEach(r => {
+    const b = r.alive_base||0, n = r.alive||0;
+    r.share = n/tot*100;
+    r.cagr = (b && n) ? (Math.pow(n/b, 0.2) - 1) * 100 : null;
+    r.survival_5y = r.coh_n ? r.coh_s/r.coh_n : null;
+    r.suspend_rate = n ? (r.suspended||0)/n*100 : null;
+    r.operating_rate = n ? (r.tax_active||0)/n*100 : null;
+    r.cap_med = groupedMedian(capBy[r.city] || {});
+  });
+  const hhi = rows.reduce((s,r) => s + Math.pow(r.alive/tot*100, 2), 0);
+  return {cities:rows, hhi, total:tot};
+},
+
+async capital(f){
+  const w = whereOf(f), now = MAXY();
+  const sel = [];
+  BANDS.forEach(b => {
+    sel.push(`sum(n) FILTER (WHERE 資本級距 = ${b.i} AND ${aliveAt(now)}) AS c${b.i}`);
+    sel.push(`sum(n) FILTER (WHERE 資本級距 = ${b.i}
+              AND 設立年 BETWEEN ${MINY()} AND ${now-5}) AS n${b.i}`);
+    sel.push(`sum(n) FILTER (WHERE 資本級距 = ${b.i}
+              AND 設立年 BETWEEN ${MINY()} AND ${now-5} AND ${SURV5}) AS s${b.i}`);
+  });
+  const row = await one(`SELECT ${sel.join(', ')} FROM cube WHERE ${w}`);
+  const buckets = BANDS.filter(b => b.lo !== null).map(b => {
+    const n = row['n'+b.i]||0;
+    return {label:b.label, min:b.lo, max:b.hi, count:row['c'+b.i]||0,
+            cohort:n, survival_5y: n ? (row['s'+b.i]||0)/n : null};
+  });
+  // 各年度新設公司的資本中位數（同樣用級距推估）
+  const tr = await sql(`SELECT 設立年 y, 資本級距 b, sum(n) n FROM cube
+    WHERE ${w} AND 設立年 >= ${MINY()} GROUP BY 1,2 ORDER BY 1`);
+  const byY = {};
+  tr.forEach(r => { (byY[r.y] = byY[r.y] || {})[r.b] = r.n; });
+  const trend = Object.keys(byY).sort().map(y => ({
+    year:+y,
+    n: Object.values(byY[y]).reduce((s,v) => s+v, 0),
+    med: groupedMedian(byY[y])}));
+  return {buckets, trend,
+    note: f.kind === '公司' ? null
+        : '行號的資本額商業司未提供，此處採用財政部稅籍登記的資本額；查無稅籍者不列入。'};
+},
+
+};
+
+
+async function loadMeta(){
+  const m = await (await fetch('./data/meta.json')).json();
+  m.industries = await sql(`SELECT 登記別 AS kind, 產業 AS name, sum(n) AS n,
+      sum(n) FILTER (WHERE 狀態組 = '存續') AS alive
+    FROM cube GROUP BY 1,2 ORDER BY 1, 4 DESC`);
+  m.cities = await sql(`SELECT 登記別 AS kind, 縣市 AS name, sum(n) AS n
+    FROM cube WHERE 縣市 IS NOT NULL GROUP BY 1,2 ORDER BY 1, 3 DESC`);
+  return m;
+}
+
+// ── tooltip ───────────────────────────────────────
+const tip=$('#tip');
+function showTip(e, html){
+  tip.innerHTML=html; tip.classList.add('on');
+  const r=tip.getBoundingClientRect();
+  let x=e.clientX+14, y=e.clientY-10;
+  if(x+r.width>innerWidth-8) x=e.clientX-r.width-14;
+  if(y+r.height>innerHeight-8) y=innerHeight-r.height-8;
+  tip.style.left=Math.max(8,x)+'px'; tip.style.top=Math.max(8,y)+'px';
+}
+const hideTip=()=>tip.classList.remove('on');
+const tipRow=(c,l,v)=>`<div class="tr"><span>${c?`<i style="background:${c}"></i>`:''}${l}</span><b>${v}</b></div>`;
+
+// ── SVG 小工具 ────────────────────────────────────
+const esc = s => String(s??'').replace(/[<>&"]/g, m=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[m]));
+function svgEl(w,h){ return `<svg viewBox="0 0 ${w} ${h}" role="img">`; }
+function niceMax(v){
+  if(v<=0) return 10;
+  const p=Math.pow(10,Math.floor(Math.log10(v))), r=v/p;
+  return (r<=1?1:r<=2?2:r<=2.5?2.5:r<=5?5:10)*p;
+}
+function yTicks(max,n=4){
+  const out=[]; for(let i=0;i<=n;i++) out.push(max*i/n); return out;
+}
+
+/* 折線圖（單一量值，含 crosshair）*/
+function lineChart(data, opts={}){
+  const W=opts.w||860, H=opts.h||250, m={t:14,r:16,b:28,l:56};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  if(!data.length) return '<div class="loading">沒有資料</div>';
+  const max=niceMax(Math.max(...data.map(d=>d.v))), min=0;
+  const X=i=> m.l + (data.length<2?iw/2:i*iw/(data.length-1));
+  const Y=v=> m.t + ih - (v-min)/(max-min||1)*ih;
+  let s=svgEl(W,H);
+  yTicks(max).forEach(t=>{
+    s+=`<line class="gridline" x1="${m.l}" y1="${Y(t)}" x2="${W-m.r}" y2="${Y(t)}"/>`;
+    s+=`<text class="axis-t" x="${m.l-8}" y="${Y(t)+4}" text-anchor="end">${fmt(t)}</text>`;});
+  const pts=data.map((d,i)=>`${X(i)},${Y(d.v)}`).join(' ');
+  s+=`<polyline fill="none" stroke="${opts.color||cssv('--pos')}" stroke-width="2"
+       stroke-linejoin="round" stroke-linecap="round" points="${pts}"/>`;
+  data.forEach((d,i)=>{
+    const step=Math.ceil(data.length/12);
+    if(i%step===0||i===data.length-1)
+      s+=`<text class="axis-t" x="${X(i)}" y="${H-8}" text-anchor="middle">${esc(d.k)}</text>`;
+    s+=`<circle cx="${X(i)}" cy="${Y(d.v)}" r="3.5" fill="${opts.color||cssv('--pos')}"
+         stroke="var(--surface-2)" stroke-width="2"/>`;
+    s+=`<rect class="hit" x="${X(i)-iw/data.length/2}" y="${m.t}"
+         width="${iw/data.length}" height="${ih}"
+         data-tip="${esc(JSON.stringify({t:d.k,rows:[[opts.color||cssv('--pos'),opts.label||'數值',fmt(d.v)]]}))}"/>`;
+  });
+  return s+'</svg>';
+}
+
+/* 雙向柱狀：正向往上、負向往下（新設 vs 退場）*/
+function divergingBars(data, opts={}){
+  const W=opts.w||860, H=opts.h||280, m={t:18,r:16,b:30,l:56};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  if(!data.length) return '<div class="loading">沒有資料</div>';
+  const mx=niceMax(Math.max(...data.map(d=>Math.max(d.a,d.b))));
+  const mid=m.t+ih/2, half=ih/2;
+  const bw=Math.max(4, Math.min(30, iw/data.length*0.62));
+  const X=i=> m.l + iw*(i+0.5)/data.length;
+  const cA=cssv('--pos'), cB=cssv('--neg');
+  let s=svgEl(W,H);
+  [0.5,1].forEach(f=>{
+    [mid-half*f, mid+half*f].forEach(y=>{
+      s+=`<line class="gridline" x1="${m.l}" y1="${y}" x2="${W-m.r}" y2="${y}"/>`;});
+    s+=`<text class="axis-t" x="${m.l-8}" y="${mid-half*f+4}" text-anchor="end">${fmt(mx*f)}</text>`;
+    s+=`<text class="axis-t" x="${m.l-8}" y="${mid+half*f+4}" text-anchor="end">${fmt(mx*f)}</text>`;
+  });
+  data.forEach((d,i)=>{
+    const ha=d.a/mx*half, hb=d.b/mx*half;
+    // 2px 表面間隙：正負兩根不相接
+    s+=`<rect x="${X(i)-bw/2}" y="${mid-1-ha}" width="${bw}" height="${Math.max(0,ha)}"
+         rx="3" fill="${cA}"/>`;
+    s+=`<rect x="${X(i)-bw/2}" y="${mid+1}" width="${bw}" height="${Math.max(0,hb)}"
+         rx="3" fill="${cB}"/>`;
+    s+=`<text class="axis-t" x="${X(i)}" y="${H-9}" text-anchor="middle">${esc(d.k)}</text>`;
+    s+=`<rect class="hit" x="${X(i)-iw/data.length/2}" y="${m.t}"
+         width="${iw/data.length}" height="${ih}"
+         data-tip="${esc(JSON.stringify({t:d.k,rows:[
+           [cA,opts.la||'新設',fmt(d.a)],[cB,opts.lb||'退場',fmt(d.b)],
+           ['', '淨增', sign(d.a-d.b)]]}))}"/>`;
+  });
+  s+=`<line class="axis" x1="${m.l}" y1="${mid}" x2="${W-m.r}" y2="${mid}"/>`;
+  return s+'</svg>';
+}
+
+/* 橫條圖 */
+function hBars(data, opts={}){
+  const rowH=opts.rowH||24, W=opts.w||860, m={t:6,r:60,b:6,l:opts.l||104};
+  const H=m.t+m.b+data.length*rowH;
+  if(!data.length) return '<div class="loading">沒有資料</div>';
+  const mx=Math.max(...data.map(d=>d.v))||1;
+  const iw=W-m.l-m.r;
+  let s=svgEl(W,H);
+  data.forEach((d,i)=>{
+    const y=m.t+i*rowH, w=Math.max(1,d.v/mx*iw);
+    s+=`<text class="axis-l" x="${m.l-9}" y="${y+rowH/2+4}" text-anchor="end">${esc(d.k)}</text>`;
+    s+=`<rect x="${m.l}" y="${y+3}" width="${w}" height="${rowH-8}" rx="3"
+         fill="${d.c||opts.color||cssv('--pos')}"/>`;
+    s+=`<text class="dlabel" x="${m.l+w+8}" y="${y+rowH/2+4}">${opts.fmt?opts.fmt(d):fmt(d.v)}</text>`;
+    if(d.tip) s+=`<rect class="hit" x="0" y="${y}" width="${W}" height="${rowH}"
+         data-tip="${esc(JSON.stringify(d.tip))}"/>`;
+  });
+  return s+'</svg>';
+}
+
+/* 多序列折線（世代存活曲線，用 sequential ramp）*/
+function multiLine(series, opts={}){
+  const W=opts.w||860, H=opts.h||300, m={t:16,r:64,b:32,l:52};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  if(!series.length) return '<div class="loading">沒有資料</div>';
+  const maxX=Math.max(...series.map(s=>s.points.length-1))||1;
+  const X=a=> m.l + a/maxX*iw;
+  const Y=r=> m.t + ih - r*ih;
+  let s=svgEl(W,H);
+  [0,.25,.5,.75,1].forEach(t=>{
+    s+=`<line class="gridline" x1="${m.l}" y1="${Y(t)}" x2="${W-m.r}" y2="${Y(t)}"/>`;
+    s+=`<text class="axis-t" x="${m.l-8}" y="${Y(t)+4}" text-anchor="end">${(t*100).toFixed(0)}%</text>`;});
+  for(let a=0;a<=maxX;a++)
+    s+=`<text class="axis-t" x="${X(a)}" y="${H-10}" text-anchor="middle">${a}</text>`;
+  series.forEach((se,i)=>{
+    const c=cssv(SEQ[Math.min(SEQ.length-1, Math.round(i/(Math.max(1,series.length-1))*(SEQ.length-1)))]);
+    const pts=se.points.map(p=>`${X(p.age)},${Y(p.rate)}`).join(' ');
+    s+=`<polyline fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round"
+         stroke-linecap="round" points="${pts}"/>`;
+    const last=se.points[se.points.length-1];
+    s+=`<circle cx="${X(last.age)}" cy="${Y(last.rate)}" r="3.5" fill="${c}"
+         stroke="var(--surface-2)" stroke-width="2"/>`;
+    s+=`<text class="axis-t" x="${X(last.age)+7}" y="${Y(last.rate)+4}"
+         fill="${c}" style="font-weight:600">${se.year}</text>`;
+    se.points.forEach(p=>{
+      s+=`<circle cx="${X(p.age)}" cy="${Y(p.rate)}" r="8" fill="transparent"
+           data-tip="${esc(JSON.stringify({t:se.year+' 年世代 · 第 '+p.age+' 年',
+             rows:[[c,'存活',fmt(p.alive)+' / '+fmt(se.size)],['','存活率',pct(p.rate)]]}))}"/>`;
+    });
+  });
+  return s+'</svg>';
+}
+
+/* 散佈圖（產業比較矩陣）*/
+function scatter(pts, opts={}){
+  const W=opts.w||860, H=opts.h||460, m={t:20,r:24,b:44,l:60};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  if(!pts.length) return '<div class="loading">沒有資料</div>';
+  const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y);
+  const x0=Math.min(...xs), x1=Math.max(...xs), y0=Math.min(...ys), y1=Math.max(...ys);
+  const px=(x1-x0)*0.08||1, py=(y1-y0)*0.08||1;
+  const X=v=> m.l + (v-(x0-px))/((x1+px)-(x0-px))*iw;
+  const Y=v=> m.t + ih - (v-(y0-py))/((y1+py)-(y0-py))*ih;
+  const rMax=Math.max(...pts.map(p=>p.r))||1;
+  const R=v=> 4 + Math.sqrt(v/rMax)*20;
+  const mx=opts.mx ?? (x0+x1)/2, my=opts.my ?? (y0+y1)/2;
+  let s=svgEl(W,H);
+  for(let i=0;i<=4;i++){
+    const yv=(y0-py)+((y1+py)-(y0-py))*i/4;
+    s+=`<line class="gridline" x1="${m.l}" y1="${Y(yv)}" x2="${W-m.r}" y2="${Y(yv)}"/>`;
+    s+=`<text class="axis-t" x="${m.l-8}" y="${Y(yv)+4}" text-anchor="end">${opts.fy?opts.fy(yv):yv.toFixed(0)}</text>`;
+    const xv=(x0-px)+((x1+px)-(x0-px))*i/4;
+    s+=`<text class="axis-t" x="${X(xv)}" y="${H-24}" text-anchor="middle">${opts.fx?opts.fx(xv):xv.toFixed(0)}</text>`;
+  }
+  s+=`<line class="axis" x1="${X(mx)}" y1="${m.t}" x2="${X(mx)}" y2="${m.t+ih}"
+       stroke-dasharray="3 3"/>`;
+  s+=`<line class="axis" x1="${m.l}" y1="${Y(my)}" x2="${W-m.r}" y2="${Y(my)}"
+       stroke-dasharray="3 3"/>`;
+  (opts.quads||[]).forEach(qd=>{
+    s+=`<text class="quad-lbl" x="${qd.x==='l'?m.l+8:W-m.r-8}"
+         y="${qd.y==='t'?m.t+14:m.t+ih-6}"
+         text-anchor="${qd.x==='l'?'start':'end'}">${esc(qd.t)}</text>`;});
+  const c=cssv('--pos');
+  pts.slice().sort((a,b)=>b.r-a.r).forEach(p=>{
+    s+=`<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="${R(p.r)}" fill="${c}"
+         fill-opacity=".38" stroke="${c}" stroke-width="1.5"
+         data-tip="${esc(JSON.stringify(p.tip))}"/>`;});
+  pts.slice().sort((a,b)=>b.r-a.r).slice(0,opts.labels??8).forEach(p=>{
+    s+=`<text class="axis-t" x="${X(p.x)}" y="${Y(p.y)-R(p.r)-5}" text-anchor="middle"
+         style="font-weight:600;fill:var(--ink-1)">${esc(p.k)}</text>`;});
+  s+=`<text class="axis-l" x="${m.l+iw/2}" y="${H-4}" text-anchor="middle">${esc(opts.xlab||'')}</text>`;
+  s+=`<text class="axis-l" x="${-(m.t+ih/2)}" y="14" transform="rotate(-90)"
+       text-anchor="middle">${esc(opts.ylab||'')}</text>`;
+  return s+'</svg>';
+}
+
+/* 直條圖 */
+function vBars(data, opts={}){
+  const W=opts.w||860, H=opts.h||250, m={t:22,r:16,b:opts.b||42,l:56};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  if(!data.length) return '<div class="loading">沒有資料</div>';
+  const mx=niceMax(Math.max(...data.map(d=>d.v)));
+  const bw=Math.max(6, Math.min(52, iw/data.length*0.62));
+  const X=i=> m.l+iw*(i+0.5)/data.length;
+  const Y=v=> m.t+ih-v/mx*ih;
+  let s=svgEl(W,H);
+  yTicks(mx).forEach(t=>{
+    s+=`<line class="gridline" x1="${m.l}" y1="${Y(t)}" x2="${W-m.r}" y2="${Y(t)}"/>`;
+    s+=`<text class="axis-t" x="${m.l-8}" y="${Y(t)+4}" text-anchor="end">${fmt(t)}</text>`;});
+  data.forEach((d,i)=>{
+    s+=`<rect x="${X(i)-bw/2}" y="${Y(d.v)}" width="${bw}" height="${m.t+ih-Y(d.v)}"
+         rx="3" fill="${d.c||opts.color||cssv('--pos')}"/>`;
+    const ly=H-(opts.b?26:10);
+    s+= opts.rotate
+      ? `<text class="axis-t" x="${X(i)}" y="${ly}" text-anchor="end"
+           transform="rotate(-32 ${X(i)} ${ly})">${esc(d.k)}</text>`
+      : `<text class="axis-t" x="${X(i)}" y="${ly}" text-anchor="middle">${esc(d.k)}</text>`;
+    if(d.tip) s+=`<rect class="hit" x="${X(i)-iw/data.length/2}" y="${m.t}"
+         width="${iw/data.length}" height="${ih}"
+         data-tip="${esc(JSON.stringify(d.tip))}"/>`;
+  });
+  return s+'</svg>';
+}
+
+
+// ── 分頁定義 ──────────────────────────────────────
+const PAGES=[
+  {id:'p1', t:'產業總覽',     d:'現況規模、動能與資本輪廓，30 秒掌握這個賽道的體質。'},
+  {id:'p2', t:'世代存活分析', d:'每個設立年份視為一個世代，追蹤它逐年還剩下多少家 —— 哪一年成立、幾年後倒閉。'},
+  {id:'p3', t:'進退場動態',   d:'新陳代謝速度：進入率、退出率與汰換率，看這個產業是在擴張還是在洗牌。'},
+  {id:'p4', t:'產業比較矩陣', d:'把所有產業放在「成長 × 存活」兩軸上，找出值得進入與應該迴避的賽道。'},
+  {id:'p5', t:'地理分布',     d:'區域規模、成長與存活率差異，以及市場集中度。'},
+  {id:'p6', t:'資本結構',     d:'進入門檻與資本厚度和存活率的關係。'},
+];
+
+// ── 啟動 ─────────────────────────────────────────
+async function boot(){
+  await initDB(m => { $('#sub').textContent = m; });
+  S.meta = await loadMeta();
+  S.yFrom=S.meta.min_year; S.yTo=S.meta.max_year;
+  $('#sub').textContent=`資料期間 ${S.meta.min_year}–${S.meta.max_year}`;
+  $('#footnote').textContent =
+    `資料建置日期 ${S.meta.built_at}｜涵蓋 ${nf.format(S.meta.companies)} 家公司、`
+    + `${nf.format(S.meta.biz)} 家商業登記（行號）。`;
+
+  $('#nav').innerHTML=PAGES.map((p,i)=>
+    `<button data-p="${p.id}" aria-selected="${i===0}"><span class="n">${i+1}</span>${p.t}</button>`).join('');
+  $('#main').innerHTML=PAGES.map(p=>
+    `<section class="page${p.id==='p1'?' on':''}" id="${p.id}">
+       <div class="phead"><h2>${p.t}</h2><p>${p.d}</p></div>
+       <div class="body"><div class="loading">載入中…</div></div>
+     </section>`).join('');
+  $('#nav').onclick=e=>{const b=e.target.closest('button'); if(b) go(b.dataset.p);};
+
+  const ys=[]; for(let y=S.meta.min_year;y<=S.meta.max_year;y++) ys.push(y);
+  $('#yFrom').innerHTML=ys.map(y=>`<option value="${y}">${y}</option>`).join('');
+  $('#yTo').innerHTML=ys.map(y=>`<option value="${y}">${y}</option>`).join('');
+  $('#yFrom').value=S.meta.min_year; $('#yTo').value=S.meta.max_year;
+
+  buildPickers();
+  bindUI();
+  render();
+}
+
+function buildPickers(){
+  const inds=S.meta.industries.filter(i=>i.kind===S.kind);
+  const q=($('#indSearch').value||'').trim();
+  const shown=q?inds.filter(i=>i.name.includes(q)):inds;
+  $('#indList').innerHTML=shown.slice(0,400).map(i=>
+    `<label><input type="checkbox" value="${esc(i.name)}"
+       ${S.industries.has(i.name)?'checked':''}>
+     <span>${esc(i.name)}</span><span class="cnt">${fmt(i.alive)}</span></label>`).join('')
+    || '<div class="hint" style="padding:8px">沒有符合的產業</div>';
+  const cs=S.meta.cities.filter(c=>c.kind===S.kind);
+  $('#bandList').innerHTML=BANDS.map(b=>
+    `<label><input type="checkbox" value="${b.i}" ${S.bands.has(b.i)?'checked':''}>
+     <span>${esc(b.label)}</span></label>`).join('');
+  $('#cityList').innerHTML=cs.map(c=>
+    `<label><input type="checkbox" value="${esc(c.name)}"
+       ${S.cities.has(c.name)?'checked':''}>
+     <span>${esc(c.name)}</span><span class="cnt">${fmt(c.n)}</span></label>`).join('');
+  drawChips();
+}
+function drawChips(){
+  $('#indChips').innerHTML=[...S.industries].map(n=>
+    `<span class="chip">${esc(n)}<button data-x="${esc(n)}">×</button></span>`).join('');
+}
+
+function bindUI(){
+  $('#kind').onclick=e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    S.kind=b.dataset.v;
+    $$('#kind button').forEach(x=>x.setAttribute('aria-pressed', x===b));
+    S.industries.clear(); S.cities.clear(); S.cache={};
+    $('#kindHint').textContent = S.kind==='公司'
+      ? '公司登記：有資本額與完整解散日期'
+      : '行號（獨資／合夥）：沒有資本額欄位，資本結構頁不適用';
+    $('#capGroup').style.display='';   // 行號的資本額由稅籍補上，一樣可以篩
+    buildPickers(); render();
+  };
+  $('#susp').onclick=e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    S.suspend=b.dataset.v;
+    $$('#susp button').forEach(x=>x.setAttribute('aria-pressed', x===b));
+    S.cache={}; S.dPage=1; render();
+  };
+  $('#indSearch').oninput=buildPickers;
+  $('#indList').onchange=e=>{
+    const v=e.target.value;
+    e.target.checked?S.industries.add(v):S.industries.delete(v); drawChips();};
+  $('#indChips').onclick=e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    S.industries.delete(b.dataset.x); buildPickers();};
+  $('#cityList').onchange=e=>{
+    const v=e.target.value;
+    e.target.checked?S.cities.add(v):S.cities.delete(v);};
+  $('#bandList').onchange=e=>{
+    const v=+e.target.value;
+    e.target.checked?S.bands.add(v):S.bands.delete(v);};
+  $('#apply').onclick=()=>{
+    S.yFrom=+$('#yFrom').value; S.yTo=+$('#yTo').value;
+    if(S.yFrom>S.yTo){[S.yFrom,S.yTo]=[S.yTo,S.yFrom];
+      $('#yFrom').value=S.yFrom; $('#yTo').value=S.yTo;}
+    S.cache={}; S.dPage=1; render();
+  };
+  $('#reset').onclick=()=>{
+    S.industries.clear(); S.cities.clear();
+    S.bands.clear();
+    S.yFrom=S.meta.min_year; S.yTo=S.meta.max_year;
+    $('#yFrom').value=S.yFrom; $('#yTo').value=S.yTo; $('#indSearch').value='';
+    S.cache={}; S.dPage=1; buildPickers(); render();
+  };
+  $('#theme').onclick=()=>{
+    const dark=document.documentElement.getAttribute('data-theme')==='dark';
+    document.documentElement.setAttribute('data-theme', dark?'light':'dark');
+    $('#theme').textContent = dark?'◐ 深色':'◑ 淺色';
+    S.cache={}; render();
+  };
+  document.body.addEventListener('mousemove',e=>{
+    const t=e.target.closest('[data-tip]');
+    if(!t) return hideTip();
+    const d=JSON.parse(t.getAttribute('data-tip'));
+    showTip(e, `<div class="th">${esc(d.t)}</div>`+
+      d.rows.map(r=>tipRow(r[0],esc(r[1]),esc(r[2]))).join(''));
+  });
+  document.body.addEventListener('mouseleave',hideTip);
+}
+
+function go(id){
+  S.page=id;
+  $$('#nav button').forEach(b=>b.setAttribute('aria-selected', b.dataset.p===id));
+  $$('.page').forEach(p=>p.classList.toggle('on', p.id===id));
+  render();
+}
+const scope = () => {
+  const i=S.industries.size, c=S.cities.size;
+  return (i?[...S.industries].slice(0,2).join('、')+(i>2?` 等 ${i} 類`:''):'全部產業')
+       + (c?`｜${[...S.cities].slice(0,2).join('、')}${c>2?` 等 ${c} 縣市`:''}`:'');
+};
+
+async function render(){
+  const el=$(`#${S.page} .body`);
+  el.innerHTML='<div class="loading">計算中…</div>';
+  try{ await ({p1:P1,p2:P2,p3:P3,p4:P4,p5:P5,p6:P6})[S.page](el); }
+  catch(err){ el.innerHTML=`<div class="err">載入失敗：${esc(err.message)}</div>`;
+    console.error(err); }
+}
+
+
+// ── P1 產業總覽 ───────────────────────────────────
+async function P1(el){
+  const d=await api('overview');
+  const k=d.kpi, ys=d.yearly;
+  const kpi=(t,v,sub,cls)=>`<div class="kpi"><div class="k">${t}</div>
+    <div class="v">${v}</div><div class="d ${cls||''}">${sub||''}</div></div>`;
+  const gr=k.growth_pct;
+  el.innerHTML=`
+  <div class="kpis">
+    ${kpi('登記存續', fmt(k.alive), `累計登記 ${fmt(k.total)} 筆`)}
+    ${kpi('稅籍營業中', fmt(k.operating),
+        k.alive?`佔登記存續 ${pctv(k.operating/k.alive*100)}`:'')}
+    ${kpi('停業／非營業', fmt(k.suspended+k.tax_inactive),
+        `停業 ${fmt(k.suspended)}・非營業 ${fmt(k.tax_inactive)}`)}
+    ${kpi(`${k.last_year} 年新設`, fmt(k.new_last), `退場 ${fmt(k.exit_last)} 家`)}
+    ${kpi(`${k.last_year} 年淨增`, sign(k.net_last),
+        gr==null?'':`存量年增 ${pctv(gr)}`, (k.net_last>=0?'up':'dn'))}
+    ${kpi('五年存活率', pct(k.survival_5y,0), '成立滿 5 年仍存續的比例')}
+    ${kpi('資本額中位數', money(k.capital_median), '存續公司（級距推估）')}
+    ${kpi('資本額總計', money(k.capital_sum), '存續公司合計')}
+  </div>
+
+  <div class="card">
+    <h3>存量趨勢</h3><p class="cap">${esc(scope())}｜每年年底仍存續的家數</p>
+    <div class="scroll-x">${lineChart(ys.map(y=>({k:y.year,v:y.alive})),{label:'存續家數'})}</div>
+  </div>
+
+  <div class="card">
+    <h3>每年進場與退場</h3>
+    <p class="cap">上方為當年新設立、下方為當年消滅（解散／撤銷／廢止）</p>
+    <div class="legend">
+      <span><i style="background:var(--pos)"></i>新設</span>
+      <span><i style="background:var(--neg)"></i>退場</span></div>
+    <div class="scroll-x">${divergingBars(
+        ys.map(y=>({k:y.year,a:y.new,b:y.exit})),{la:'新設',lb:'退場'})}</div>
+    ${insightP1(ys,k)}
+  </div>
+
+  <div class="card">
+    <h3>年度明細</h3>
+    <div class="tw"><table><thead><tr>
+      <th>年度</th><th>年底存續</th><th>新設</th><th>退場</th><th>淨增</th><th>淨增率</th>
+    </tr></thead><tbody>${ys.slice().reverse().map(y=>{
+      const prev=ys[ys.indexOf(y)-1];
+      const rate=prev&&prev.alive?((y.net/prev.alive)*100):null;
+      return `<tr><td class="t num">${y.year}</td><td class="num">${fmt(y.alive)}</td>
+        <td class="num" style="color:var(--pos)">${fmt(y.new)}</td>
+        <td class="num" style="color:var(--neg)">${fmt(y.exit)}</td>
+        <td class="num">${sign(y.net)}</td><td class="num">${pctv(rate)}</td></tr>`;
+    }).join('')}</tbody></table></div>
+  </div>`;
+}
+function insightP1(ys,k){
+  if(ys.length<2) return '';
+  const f=ys[0], l=ys[ys.length-1];
+  const yrs=l.year-f.year;
+  const cagr=(f.alive>0&&yrs>0)?((Math.pow(l.alive/f.alive,1/yrs)-1)*100):null;
+  const totNew=ys.reduce((s,y)=>s+y.new,0), totEx=ys.reduce((s,y)=>s+y.exit,0);
+  const trend = l.net>0?'仍在淨擴張':'已轉為淨收縮';
+  return `<div class="insight">
+    ${f.year}–${l.year} 年間，存續家數自 <b>${fmt(f.alive)}</b> 家變為
+    <b>${fmt(l.alive)}</b> 家${cagr!=null?`，年複合成長率 <b>${pctv(cagr)}</b>`:''}。
+    期間共進場 <b>${fmt(totNew)}</b> 家、退場 <b>${fmt(totEx)}</b> 家，
+    每 1 家退場對應 <b>${(totNew/(totEx||1)).toFixed(1)}</b> 家新進。
+    ${l.year} 年${trend}（淨 ${sign(l.net)} 家）；成立滿 5 年的存活率為
+    <b>${pct(k.survival_5y,0)}</b>。</div>`;
+}
+
+// ── P2 世代存活分析 ───────────────────────────────
+async function P2(el){
+  const [d,c]=await Promise.all([api('cohort'), api('compare_years')]);
+  const s=d.summary;
+  const kpi=(t,v,sub)=>`<div class="kpi"><div class="k">${t}</div>
+    <div class="v">${v}</div><div class="d">${sub||''}</div></div>`;
+  const series=d.cohorts.filter(x=>x.size>=20);
+  el.innerHTML=`
+  <div class="kpis">
+    ${kpi('1 年存活率', pct(s['1y'],0),'成立後滿 1 年')}
+    ${kpi('3 年存活率', pct(s['3y'],0),'成立後滿 3 年')}
+    ${kpi('5 年存活率', pct(s['5y'],0),'成立後滿 5 年')}
+    ${kpi('10 年存活率', pct(s['10y'],0),'成立後滿 10 年')}
+    ${kpi('中位存續年數', s.median_life!=null?s.median_life+' 年':'–',
+        '已消滅公司，精度到年')}
+  </div>
+
+  <div class="card">
+    <h3>${c.year_from} 年 → ${c.year_to} 年 的組成變化</h3>
+    <p class="cap">${esc(scope())}｜用左側「觀察期間」調整起訖年</p>
+    <div class="kpis" style="margin:0">
+      ${kpi(`${c.year_from} 年底家數`, fmt(c.n0),'起點')}
+      ${kpi('撐到期末', fmt(c.survived), `存活率 ${pct(c.survival_rate,1)}`)}
+      ${kpi('期間退場', fmt(c.died), `佔起點 ${pct(c.n0?c.died/c.n0:null,1)}`)}
+      ${kpi('期間新設且仍存活', fmt(c.born),'期末的新血')}
+      ${kpi(`${c.year_to} 年底家數`, fmt(c.n1), `淨變化 ${sign(c.n1-c.n0)}`)}
+    </div>
+    <div class="insight">
+      ${c.year_from} 年底有 <b>${fmt(c.n0)}</b> 家在營運，到 ${c.year_to} 年底
+      只剩 <b>${fmt(c.survived)}</b> 家還在（存活率 <b>${pct(c.survival_rate,1)}</b>），
+      期間有 <b>${fmt(c.died)}</b> 家退場。同期新設並存活下來的有
+      <b>${fmt(c.born)}</b> 家，使 ${c.year_to} 年底總數達
+      <b>${fmt(c.n1)}</b> 家（淨 ${sign(c.n1-c.n0)}）。
+      期末的公司中有 <b>${pct(c.n1?c.born/c.n1:null,0)}</b> 是這段期間才成立的。
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>世代存活曲線</h3>
+    <p class="cap">每條線是一個設立年份的世代；橫軸為成立後第幾年，縱軸為該世代仍存活的比例</p>
+    <div class="scroll-x">${multiLine(series)}</div>
+    <div class="note">顏色由淺到深代表世代由早到晚。線越晚結束代表該世代可觀察的年數越長；
+      最新世代因觀察期短，曲線自然較短。</div>
+  </div>
+
+  <div class="card">
+    <h3>各世代存活率</h3>
+    <div class="tw"><table><thead><tr>
+      <th>設立年</th><th>該年新設</th><th>1 年</th><th>3 年</th><th>5 年</th>
+      <th>10 年</th><th>目前存活</th></tr></thead><tbody>
+      ${d.cohorts.slice().reverse().map(co=>{
+        const at=n=>co.points[n]?pct(co.points[n].rate,0):'–';
+        const last=co.points[co.points.length-1];
+        return `<tr><td class="t num">${co.year}</td><td class="num">${fmt(co.size)}</td>
+          <td class="num">${at(1)}</td><td class="num">${at(3)}</td>
+          <td class="num">${at(5)}</td><td class="num">${at(10)}</td>
+          <td class="num">${fmt(last.alive)}（${pct(last.rate,0)}）</td></tr>`;
+      }).join('')}</tbody></table></div>
+  </div>`;
+}
+
+// ── P3 進退場動態 ─────────────────────────────────
+async function P3(el){
+  const d=await api('flow');
+  const ys=d.yearly, ms=d.monthly;
+  const last=ys[ys.length-1]||{};
+  const avgChurn=ys.filter(y=>y.churn!=null).reduce((s,y)=>s+y.churn,0)/
+                 (ys.filter(y=>y.churn!=null).length||1);
+  const kpi=(t,v,sub,cls)=>`<div class="kpi"><div class="k">${t}</div>
+    <div class="v">${v}</div><div class="d ${cls||''}">${sub||''}</div></div>`;
+  el.innerHTML=`
+  <div class="kpis">
+    ${kpi(`${last.year} 進入率`, pctv(last.entry_rate), '新設 ÷ 期初存量')}
+    ${kpi(`${last.year} 退出率`, pctv(last.exit_rate), '退場 ÷ 期初存量')}
+    ${kpi(`${last.year} 淨增`, sign(last.net), '新設 − 退場',
+        (last.net>=0?'up':'dn'))}
+    ${kpi('平均進出強度', pctv(avgChurn), '（新設＋退場）÷ 期初存量')}
+  </div>
+
+  <div class="card">
+    <h3>進入率與退出率</h3>
+    <p class="cap">${esc(scope())}｜兩者的差距就是這個產業的擴張速度</p>
+    <div class="legend">
+      <span><i style="background:var(--pos)"></i>進入率</span>
+      <span><i style="background:var(--neg)"></i>退出率</span></div>
+    <div class="scroll-x">${rateChart(ys)}</div>
+    ${insightP3(ys,avgChurn)}
+  </div>
+
+  <div class="card">
+    <h3>近五年月度進出</h3>
+    <p class="cap">上方新設、下方退場，可看出季節性與突發事件</p>
+    <div class="scroll-x">${divergingBars(
+      ms.map(m=>({k:m.ym.slice(2),a:m.new,b:m.exit})),
+      {la:'新設',lb:'退場',w:Math.max(860,ms.length*17),h:250})}</div>
+  </div>
+
+  <div class="card">
+    <h3>年度動態明細</h3>
+    <div class="tw"><table><thead><tr>
+      <th>年度</th><th>期初存量</th><th>新設</th><th>退場</th><th>淨增</th>
+      <th>進入率</th><th>退出率</th><th>進出強度</th></tr></thead><tbody>
+      ${ys.slice().reverse().map((y,i)=>{
+        const idx=ys.length-1-i, prev=idx>0?ys[idx-1].alive:y.alive;
+        return `<tr><td class="t num">${y.year}</td><td class="num">${fmt(prev)}</td>
+        <td class="num" style="color:var(--pos)">${fmt(y.new)}</td>
+        <td class="num" style="color:var(--neg)">${fmt(y.exit)}</td>
+        <td class="num">${sign(y.net)}</td><td class="num">${pctv(y.entry_rate)}</td>
+        <td class="num">${pctv(y.exit_rate)}</td><td class="num">${pctv(y.churn)}</td></tr>`;
+      }).join('')}</tbody></table></div>
+  </div>`;
+}
+function rateChart(ys){
+  const W=860,H=250,m={t:16,r:16,b:30,l:52},iw=W-m.l-m.r,ih=H-m.t-m.b;
+  const vals=ys.flatMap(y=>[y.entry_rate,y.exit_rate]).filter(v=>v!=null);
+  if(!vals.length) return '<div class="loading">沒有資料</div>';
+  const mx=niceMax(Math.max(...vals));
+  const X=i=>m.l+(ys.length<2?iw/2:i*iw/(ys.length-1)), Y=v=>m.t+ih-v/mx*ih;
+  let s=svgEl(W,H);
+  yTicks(mx).forEach(t=>{
+    s+=`<line class="gridline" x1="${m.l}" y1="${Y(t)}" x2="${W-m.r}" y2="${Y(t)}"/>`;
+    s+=`<text class="axis-t" x="${m.l-8}" y="${Y(t)+4}" text-anchor="end">${t.toFixed(0)}%</text>`;});
+  [['entry_rate',cssv('--pos')],['exit_rate',cssv('--neg')]].forEach(([f,c])=>{
+    const pts=ys.map((y,i)=>y[f]!=null?`${X(i)},${Y(y[f])}`:null).filter(Boolean).join(' ');
+    s+=`<polyline fill="none" stroke="${c}" stroke-width="2" stroke-linejoin="round"
+         points="${pts}"/>`;
+    ys.forEach((y,i)=>{ if(y[f]!=null)
+      s+=`<circle cx="${X(i)}" cy="${Y(y[f])}" r="3.5" fill="${c}"
+           stroke="var(--surface-2)" stroke-width="2"/>`;});
+  });
+  ys.forEach((y,i)=>{
+    const step=Math.ceil(ys.length/12);
+    if(i%step===0||i===ys.length-1)
+      s+=`<text class="axis-t" x="${X(i)}" y="${H-8}" text-anchor="middle">${y.year}</text>`;
+    s+=`<rect class="hit" x="${X(i)-iw/ys.length/2}" y="${m.t}" width="${iw/ys.length}"
+         height="${ih}" data-tip="${esc(JSON.stringify({t:y.year+' 年',rows:[
+           [cssv('--pos'),'進入率',pctv(y.entry_rate)],
+           [cssv('--neg'),'退出率',pctv(y.exit_rate)],
+           ['','淨增',sign(y.net)]]}))}"/>`;
+  });
+  return s+'</svg>';
+}
+function insightP3(ys,avgChurn){
+  const l=ys[ys.length-1]; if(!l) return '';
+  const hot=ys.filter(y=>y.churn!=null).sort((a,b)=>b.churn-a.churn)[0];
+  const state = l.entry_rate>l.exit_rate ? '進入率高於退出率，產業仍在吸引新血'
+                                          : '退出率已高於進入率，產業正在收縮';
+  return `<div class="insight">
+    ${l.year} 年進入率 <b>${pctv(l.entry_rate)}</b>、退出率 <b>${pctv(l.exit_rate)}</b>，
+    ${state}。觀察期內平均汰換率 <b>${pctv(avgChurn)}</b>
+    ${hot?`，其中 <b>${hot.year}</b> 年最劇烈（${pctv(hot.churn)}）`:''}。
+    進出強度是「新設＋退場」除以期初存量，衡量的是資源重新配置的劇烈程度 ——
+    它高不一定是壞事：快速擴張和高度淘汰都會推高它，要搭配上面的進入率與
+    退出率一起看才知道是哪一種。</div>`;
+}
+
+// ── P4 產業比較矩陣 ───────────────────────────────
+async function P4(el){
+  const d=await api('matrix');
+  const items=d.items.filter(i=>i.cagr!=null&&i.survival_5y!=null);
+  const mx=items.reduce((s,i)=>s+i.cagr,0)/(items.length||1);
+  const my=items.reduce((s,i)=>s+i.survival_5y,0)/(items.length||1);
+  const pts=items.map(i=>({
+    k:i.name, x:i.cagr, y:i.survival_5y*100, r:i.alive,
+    tip:{t:i.name, rows:[
+      [cssv('--pos'),'現存家數',fmt(i.alive)],
+      ['','稅籍營業中',fmt(i.operating)+`（${pctv(i.operating_rate)}）`],
+      ['','其中停業中',fmt(i.suspended)+`（${pctv(i.suspend_rate)}）`],
+      ['',`近 5 年 CAGR`,pctv(i.cagr)],
+      ['','5 年存活率',pct(i.survival_5y,1)],
+      ['',`近 5 年新設`,fmt(i.new_5y)+`（進入率 ${pctv(i.entry_rate)}）`],
+      ['',`近 5 年退場`,fmt(i.exit_5y)+`（退出率 ${pctv(i.exit_rate)}）`],
+      ['',`${d.year_base} 年存量（分母）`,fmt(i.alive_base)],
+      ['','資本中位數',money(i.capital_median)]]}}));
+  el.innerHTML=`
+  <div class="card">
+    <h3>成長 × 存活 矩陣</h3>
+    <p class="cap">橫軸：${d.year_base}–${d.year_now} 年存量的年複合成長率｜
+      縱軸：成立滿 5 年的存活率｜泡泡大小：現存家數。虛線為所有產業的平均。<br>
+      下方表格的<b>進入率／退出率</b>分母都是 ${d.year_base} 年的存量，
+      所以高成長產業的進入率可以超過 100%（新設家數比五年前的整體規模還多），
+      這代表擴張快，不是汰換激烈。</p>
+    <div class="scroll-x">${scatter(pts,{
+      mx, my:my*100, xlab:`存量年複合成長率（%）`, ylab:'五年存活率（%）',
+      fx:v=>v.toFixed(0)+'%', fy:v=>v.toFixed(0)+'%',
+      quads:[{x:'l',y:'t',t:'穩定守成'},{x:'r',y:'t',t:'明星賽道'},
+             {x:'l',y:'b',t:'衰退高風險'},{x:'r',y:'b',t:'高成長高汰換'}]})}</div>
+    <div class="insight">
+      右上角是<b>又成長又耐活</b>的賽道；右下角雖然成長快，但五年內倒閉比例高，
+      屬於高汰換的紅海；左下角則是既萎縮又難存活，應優先迴避。
+      只列入登記筆數 30 筆以上的產業，共 <b>${fmt(items.length)}</b> 個。
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>產業排行</h3>
+    <p class="cap">點欄位標題可排序</p>
+    <div class="tw"><table id="mtx"><thead><tr>
+      <th data-s="name">產業</th><th data-s="alive">現存家數</th>
+      <th data-s="cagr">5 年 CAGR</th><th data-s="survival_5y">5 年存活率</th>
+      <th data-s="new_5y">近 5 年新設</th><th data-s="entry_rate">進入率</th>
+      <th data-s="exit_5y">近 5 年退場</th><th data-s="exit_rate">退出率</th>
+      <th data-s="operating_rate">實質營運率</th>
+      <th data-s="suspend_rate">停業率</th>
+      <th data-s="capital_median">資本中位數</th>
+    </tr></thead><tbody></tbody></table></div>
+  </div>`;
+  let sortKey='alive', asc=false;
+  const draw=()=>{
+    const rows=items.slice().sort((a,b)=>{
+      const x=a[sortKey], y=b[sortKey];
+      if(typeof x==='string') return asc?x.localeCompare(y):y.localeCompare(x);
+      return asc?(x??-1e9)-(y??-1e9):(y??-1e9)-(x??-1e9);});
+    const mxA=Math.max(...rows.map(r=>r.alive));
+    $('#mtx tbody').innerHTML=rows.map(r=>`<tr>
+      <td class="t">${esc(r.name)}</td>
+      <td class="num bar-cell"><i style="width:${r.alive/mxA*100}%"></i><span>${fmt(r.alive)}</span></td>
+      <td class="num" style="color:${r.cagr>=0?'var(--pos)':'var(--neg)'}">${pctv(r.cagr)}</td>
+      <td class="num">${pct(r.survival_5y,1)}</td>
+      <td class="num">${fmt(r.new_5y)}</td>
+      <td class="num" style="color:var(--pos)">${pctv(r.entry_rate)}</td>
+      <td class="num">${fmt(r.exit_5y)}</td>
+      <td class="num" style="color:${r.exit_rate>=30?'var(--neg)':'inherit'}">${pctv(r.exit_rate)}</td>
+      <td class="num" style="color:${r.operating_rate<80?'var(--neg)':'inherit'}">${pctv(r.operating_rate)}</td>
+      <td class="num" style="color:${r.suspend_rate>=10?'var(--neg)':'inherit'}">${pctv(r.suspend_rate)}</td>
+      <td class="num">${money(r.capital_median)}</td></tr>`).join('');
+  };
+  $('#mtx thead').onclick=e=>{
+    const th=e.target.closest('th'); if(!th) return;
+    const k=th.dataset.s; asc = (k===sortKey)?!asc:false; sortKey=k; draw();};
+  draw();
+}
+
+// ── P5 地理分布 ───────────────────────────────────
+async function P5(el){
+  const d=await api('geo');
+  const cs=d.cities;
+  const top=cs[0]||{};
+  const top3=cs.slice(0,3).reduce((s,c)=>s+c.share,0);
+  const conc = d.hhi>2500?'高度集中':d.hhi>1500?'中度集中':'相對分散';
+  const best=cs.filter(c=>c.survival_5y!=null&&c.alive>=50)
+               .sort((a,b)=>b.survival_5y-a.survival_5y)[0];
+  const kpi=(t,v,sub)=>`<div class="kpi"><div class="k">${t}</div>
+    <div class="v">${v}</div><div class="d">${sub||''}</div></div>`;
+  el.innerHTML=`
+  <div class="kpis">
+    ${kpi('最大市場', top.city||'–', `${fmt(top.alive)} 家（${pctv(top.share)}）`)}
+    ${kpi('前三大合計', pctv(top3), '佔全國比重')}
+    ${kpi('集中度 HHI', d.hhi.toFixed(0), conc)}
+    ${kpi('存活率最高', best?best.city:'–',
+        best?`5 年存活率 ${pct(best.survival_5y,0)}`:'')}
+  </div>
+
+  <div class="card">
+    <h3>各縣市現存家數</h3>
+    <p class="cap">${esc(scope())}</p>
+    <div class="scroll-x">${hBars(cs.map(c=>({
+      k:c.city, v:c.alive,
+      tip:{t:c.city, rows:[
+        [cssv('--pos'),'現存家數',fmt(c.alive)],
+        ['','佔比',pctv(c.share)],
+        ['','5 年 CAGR',pctv(c.cagr)],
+        ['','5 年存活率',pct(c.survival_5y,1)],
+        ['','實質營運率',pctv(c.operating_rate)],
+        ['','停業率',pctv(c.suspend_rate)],
+        ['','近 5 年新設',fmt(c.new_5y)],
+        ['','近 5 年退場',fmt(c.exit_5y)]]}
+    })),{rowH:26,l:76})}</div>
+    <div class="insight">
+      ${top.city} 以 <b>${fmt(top.alive)}</b> 家居首，占全國
+      <b>${pctv(top.share)}</b>；前三大縣市合計 <b>${pctv(top3)}</b>。
+      HHI 為 <b>${d.hhi.toFixed(0)}</b>，屬於<b>${conc}</b>的市場結構。
+      ${best?`存活率最高的是 <b>${best.city}</b>（${pct(best.survival_5y,0)}），`:''}
+      規模大不等於存活率高，展店選點時兩者要分開看。
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>縣市指標比較</h3>
+    <div class="tw"><table><thead><tr>
+      <th>縣市</th><th>現存家數</th><th>佔比</th><th>5 年 CAGR</th>
+      <th>5 年存活率</th><th>實質營運率</th><th>停業率</th><th>近 5 年新設</th><th>近 5 年退場</th>
+      <th>資本中位數</th>
+    </tr></thead><tbody>${cs.map(c=>`<tr>
+      <td class="t">${esc(c.city)}</td><td class="num">${fmt(c.alive)}</td>
+      <td class="num">${pctv(c.share)}</td>
+      <td class="num" style="color:${c.cagr>=0?'var(--pos)':'var(--neg)'}">${pctv(c.cagr)}</td>
+      <td class="num">${pct(c.survival_5y,1)}</td>
+      <td class="num" style="color:${c.operating_rate<80?'var(--neg)':'inherit'}">${pctv(c.operating_rate)}</td>
+      <td class="num" style="color:${c.suspend_rate>=10?'var(--neg)':'inherit'}">${pctv(c.suspend_rate)}</td>
+      <td class="num">${fmt(c.new_5y)}</td><td class="num">${fmt(c.exit_5y)}</td>
+      <td class="num">${money(c.cap_med)}</td></tr>`).join('')}</tbody></table></div>
+  </div>`;
+}
+
+// ── P6 資本結構 ───────────────────────────────────
+async function P6(el){
+  const d=await api('capital');
+  if(!d.buckets||!d.buckets.length){
+    el.innerHTML=`<div class="card"><div class="note">這個篩選條件下沒有資本額資料。</div></div>`;
+    return; }
+  const srcNote = d.note?`<div class="note">${esc(d.note)}</div>`:'';
+  const b=d.buckets, tot=b.reduce((s,x)=>s+x.count,0)||1;
+  const lo=b[0], hi=b[b.length-1];
+  const trend=d.trend.filter(t=>t.med!=null);
+  el.innerHTML=`
+  <div class="card">
+    <h3>資本額級距分布</h3>
+    <p class="cap">${esc(scope())}｜現存公司依資本總額分組</p>
+    <div class="scroll-x">${vBars(b.map((x,i)=>({
+      k:x.label, v:x.count,
+      tip:{t:x.label, rows:[
+        [cssv('--pos'),'現存家數',fmt(x.count)],
+        ['','佔比',pctv(x.count/tot*100)],
+        ['','5 年存活率',pct(x.survival_5y,1)]]}
+    })),{h:260,b:44,rotate:true})}</div>
+  </div>
+
+  <div class="card">
+    <h3>資本厚度與存活率</h3>
+    <p class="cap">各級距中「成立滿 5 年仍存續」的比例</p>
+    <div class="scroll-x">${hBars(b.map((x,i)=>({
+      k:x.label, v:(x.survival_5y||0)*100,
+      tip:{t:x.label, rows:[
+        ['','5 年存活率',pct(x.survival_5y,1)],
+        ['','觀察樣本',fmt(x.cohort)+' 家']]}
+    })),{rowH:30,l:104,fmt:d=>pctv(d.v,1)})}</div>
+    <div class="insight">
+      資本額 <b>${lo.label}</b> 的五年存活率為 <b>${pct(lo.survival_5y,1)}</b>，
+      而 <b>${hi.label}</b> 為 <b>${pct(hi.survival_5y,1)}</b>，
+      相差 <b>${((hi.survival_5y-lo.survival_5y)*100).toFixed(0)} 個百分點</b>。
+      資本厚度與存活率呈明顯正相關 —— 但這是相關而非因果：資本大的公司往往
+      背後也有更完整的營運準備，不代表單純把資本額登記高就能提高存活機率。
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>新設公司資本額中位數趨勢</h3>
+    <p class="cap">各年度新設立公司的資本總額中位數，反映進入門檻的變化</p>
+    <div class="scroll-x">${lineChart(trend.map(t=>({k:t.year,v:t.med})),
+      {label:'資本中位數',color:cssv('--seq-5')})}</div>
+    ${srcNote}
+  </div>
+
+  <div class="card">
+    <h3>級距明細</h3>
+    <div class="tw"><table><thead><tr>
+      <th>資本級距</th><th>現存家數</th><th>佔比</th><th>觀察樣本</th><th>5 年存活率</th>
+    </tr></thead><tbody>${b.map(x=>`<tr>
+      <td class="t">${esc(x.label)}</td><td class="num">${fmt(x.count)}</td>
+      <td class="num">${pctv(x.count/tot*100)}</td>
+      <td class="num">${fmt(x.cohort)}</td><td class="num">${pct(x.survival_5y,1)}</td>
+      </tr>`).join('')}</tbody></table></div>
+  </div>`;
+}
+
+
+
+boot().catch(e=>{
+  console.error(e);
+  document.body.innerHTML=`<div class="err" style="margin:40px;line-height:1.8">
+    <b>載入失敗</b>：${esc(e.message)}<br><br>
+    這個頁面必須透過 http/https 開啟，不能用 file:// 直接雙擊，
+    而且需要能連到 cdn.jsdelivr.net 載入查詢引擎。<br>
+    本機測試請執行同資料夾裡的 <code>preview.bat</code>。</div>`;
+});
+</script>
+</body>
+</html>
