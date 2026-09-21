@@ -337,19 +337,21 @@ async function initDB(say){
   URL.revokeObjectURL(wurl);
   CONN = await db.connect();
 
-  say('載入資料（約 10 MB）…');
+  say('載入資料（約 15 MB）…');
   // 直接把檔案抓成 buffer 再交給 DuckDB，不用 registerFileURL。
   // registerFileURL 走的是 HTTP Range 請求，本機用 python -m http.server
-  // 預覽時不支援 Range 會失敗；資料只有 10 MB，一次下載反而單純又快。
+  // 預覽時不支援 Range 會失敗；資料只有 15 MB，一次下載反而單純又快。
+  // 這些檔案由 build_pages_data.py 產生
   const base = new URL('./data/', location.href).href;
-  for(const f of ['cube.parquet','monthly.parquet']){
-    const res = await fetch(base + f);
-    if(!res.ok) throw new Error(`載入 ${f} 失敗（HTTP ${res.status}）`);
-    await db.registerFileBuffer(f, new Uint8Array(await res.arrayBuffer()));
-  }
-  // 資料只有 10 MB，一次讀進記憶體，之後的查詢都不再碰網路
-  await CONN.query(`CREATE TABLE cube AS SELECT * FROM 'cube.parquet'`);
-  await CONN.query(`CREATE TABLE monthly AS SELECT * FROM 'monthly.parquet'`);
+  const tables = ['cube','firms','capdist','life','monthly'];
+  await Promise.all(tables.map(async t => {
+    const res = await fetch(`${base}${t}.parquet`);
+    if(!res.ok) throw new Error(`載入 ${t}.parquet 失敗（HTTP ${res.status}）`);
+    await db.registerFileBuffer(`${t}.parquet`, new Uint8Array(await res.arrayBuffer()));
+  }));
+  // 一次讀進記憶體，之後的查詢都不再碰網路
+  for(const t of tables)
+    await CONN.query(`CREATE TABLE ${t} AS SELECT * FROM '${t}.parquet'`);
 }
 
 const lit = s => "'" + String(s).replace(/'/g, "''") + "'";
@@ -369,6 +371,11 @@ async function sql(qs){
   });
 }
 const one = async qs => (await sql(qs))[0] || {};
+// sum() FILTER 在沒有符合的列時是 NULL，後端的 count() 則是 0，補成 0 才會一致
+const zeroNulls = (rows, keys) =>
+  rows.forEach(r => keys.forEach(k => { if(r[k] == null) r[k] = 0; }));
+const COUNT_KEYS = ['alive','alive_base','suspended','tax_active',
+                    'new_5y','exit_5y','coh_n','coh_s'];
 
 // 某年年底是否存活（與後端版本同一套判定）
 const aliveAt = y => `((設立年 <= ${int(y)} OR (設立年 IS NULL AND 狀態組 = '存續'))`
@@ -406,29 +413,24 @@ const yearsOf = f => {
   return out.length ? out : [S.meta.max_year];
 };
 
-// 中位數沒辦法二次聚合（各組中位數的中位數不等於整體中位數），
-// 所以改用分組中位數估計：找出中位數落在哪個級距，再在級距內線性插值。
-function groupedMedian(counts){
-  const bs = BANDS.filter(b => b.lo !== null);
-  const tot = bs.reduce((s,b) => s + (counts[b.i]||0), 0);
-  if(!tot) return null;
-  let cum = 0;
-  for(const b of bs){
-    const n = counts[b.i] || 0;
-    if(n && cum + n >= tot/2){
-      const hi = b.hi === null ? b.lo * 3 : b.hi;   // 最高級距沒有上界，估一個
-      return b.lo + (hi - b.lo) * ((tot/2 - cum) / n);
-    }
-    cum += n;
-  }
-  return null;
+// 中位數沒辦法二次聚合（各組中位數的中位數不等於整體中位數），所以
+// capdist / life 保留的是「值 × 家數」的精確分布，這裡對它算加權中位數。
+// 和後端 median() 相同：總數為偶數時取中間兩筆的平均。
+async function medianBy(table, val, where, group){
+  const g = group || '0';
+  const rs = await sql(`WITH d AS (
+      SELECT ${g} AS g, ${val} AS v, CAST(sum(n) AS DOUBLE) AS n
+      FROM ${table} WHERE ${where} GROUP BY 1, 2),
+    c AS (SELECT g, v, sum(n) OVER (PARTITION BY g ORDER BY v) AS cum,
+                 sum(n) OVER (PARTITION BY g) AS tot FROM d)
+    SELECT g, (min(v) FILTER (WHERE cum >= floor((tot + 1) / 2))
+             + min(v) FILTER (WHERE cum >= floor(tot / 2) + 1)) / 2.0 AS med
+    FROM c GROUP BY 1`);
+  const out = {}; rs.forEach(r => out[r.g] = r.med);
+  return group ? out : (rs[0] ? rs[0].med : null);
 }
-async function medianOf(where){
-  const rs = await sql(`SELECT 資本級距 b, sum(n) n FROM cube
-                        WHERE ${where} AND 狀態組 = '存續' GROUP BY 1`);
-  const c = {}; rs.forEach(r => c[r.b] = r.n);
-  return groupedMedian(c);
-}
+// 存續者的資本額中位數（capdist 只收資本額 > 0，與後端條件相同）
+const capMedian = (where, group) => medianBy('capdist', '資本', `${where} AND 存續`, group);
 
 // ── 各分頁的資料 ───────────────────────────────────
 async function api(ep, extra, body){
@@ -463,7 +465,7 @@ async overview(f){
     `sum(n) FILTER (WHERE 設立年 BETWEEN ${MINY()} AND ${mx-5}) AS coh_n`,
     `sum(n) FILTER (WHERE 設立年 BETWEEN ${MINY()} AND ${mx-5} AND ${SURV5}) AS coh_s`);
   const row = await one(`SELECT ${sel.join(', ')} FROM cube WHERE ${w}`);
-  const cap_med = await medianOf(w);
+  const cap_med = await capMedian(w);
 
   const yearly = years.map(y => ({
     year:y, alive:row['a'+y]||0, new:row['n'+y]||0, exit:row['x'+y]||0,
@@ -512,18 +514,18 @@ async cohort(f){
     });
     summary[k+'y'] = tot ? al/tot : null;
   });
-  // 中位存續年數: 用設立年與消滅年的差估算（cube 只到年，精度到年）
-  const life = await sql(`SELECT 消滅年 - 設立年 AS yrs, sum(n) n FROM cube
-    WHERE ${w} AND 設立年 IS NOT NULL AND 消滅年 IS NOT NULL GROUP BY 1 ORDER BY 1`);
-  const tot = life.reduce((s,r) => s + r.n, 0);
-  let cum = 0, med = null;
-  for(const r of life){ cum += r.n; if(cum >= tot/2){ med = r.yrs; break; } }
-  summary.median_life = med;
+  // 中位存續年數（只看已消滅、且兩個日期都有的），精度到天
+  const days = await medianBy('life', '天數', w);
+  summary.median_life = days == null ? null : days / 365.25;
   return {cohorts, summary, horizon:mx};
 },
 
 async compare_years(f){
-  const w = whereOf(f);
+  // 這裡算的是「幾家公司」，一家公司登記多個產業只能算一次（後端用 DISTINCT 統編）。
+  // 不選產業時用已去重的 firms；只選一個產業時 cube 本身就不會重複；
+  // 選兩個以上時，同時屬於多個所選產業的公司會重複計算，靜態資料無法去重。
+  const noInd = !f.industries.length;
+  const w = whereOf(f, {ind: !noInd});
   const y0 = Math.max(MINY(), int(f.year_from));
   const y1 = Math.min(MAXY(), int(f.year_to));
   const a0 = aliveAt(y0), a1 = aliveAt(y1);
@@ -533,11 +535,14 @@ async compare_years(f){
       sum(n) FILTER (WHERE ${a0} AND ${a1}) AS survived,
       sum(n) FILTER (WHERE ${a0} AND NOT ${a1}) AS died,
       sum(n) FILTER (WHERE NOT ${a0} AND ${a1}) AS born
-    FROM cube WHERE ${w}`);
+    FROM ${noInd ? 'firms' : 'cube'} WHERE ${w}`);
   const n0 = r.n0||0;
   return {n0, n1:r.n1||0, survived:r.survived||0, died:r.died||0, born:r.born||0,
           year_from:y0, year_to:y1,
-          survival_rate: n0 ? (r.survived||0)/n0 : null};
+          survival_rate: n0 ? (r.survived||0)/n0 : null,
+          note: f.industries.length > 1
+            ? '選了多個產業時，同時登記在其中數個產業的公司會重複計算，家數會略高於實際。'
+            : null};
 },
 
 async flow(f){
@@ -557,14 +562,10 @@ async flow(f){
       exit_rate:  base ? ex/base*100 : null,
       churn:      base ? (nw+ex)/base*100 : null};
   });
-  // 月度表沒有資本級距與狀態欄位，只吃產業／縣市／登記別的篩選
-  const mc = [`登記別 = ${lit(f.kind)}`];
-  if(f.industries.length) mc.push(`產業 IN (${f.industries.map(lit).join(',')})`);
-  if(f.cities.length) mc.push(`縣市 IN (${f.cities.map(lit).join(',')})`);
   const monthly = await sql(`SELECT 年月 AS ym,
       sum(n) FILTER (WHERE 事件 = 'new')  AS new,
       sum(n) FILTER (WHERE 事件 = 'exit') AS exit
-    FROM monthly WHERE ${mc.join(' AND ')} AND 年月 IS NOT NULL
+    FROM monthly WHERE ${w} AND 年月 IS NOT NULL
     GROUP BY 1 ORDER BY 1`);
   monthly.forEach(m => { m.new = m.new||0; m.exit = m.exit||0; });
   return {yearly:out, monthly};
@@ -583,11 +584,9 @@ async matrix(f){
       sum(n) FILTER (WHERE 設立年 BETWEEN ${MINY()} AND ${now-5}) AS coh_n,
       sum(n) FILTER (WHERE 設立年 BETWEEN ${MINY()} AND ${now-5} AND ${SURV5}) AS coh_s
     FROM cube WHERE ${w} GROUP BY 1 HAVING sum(n) >= 30 ORDER BY 2 DESC`);
-  // 資本中位數要分開查，因為它得從級距分布推估
-  const capRows = await sql(`SELECT 產業 AS name, 資本級距 b, sum(n) n FROM cube
-    WHERE ${w} AND 狀態組 = '存續' GROUP BY 1,2`);
-  const capBy = {};
-  capRows.forEach(r => { (capBy[r.name] = capBy[r.name] || {})[r.b] = r.n; });
+  zeroNulls(rows, COUNT_KEYS);
+  // 資本中位數要從 capdist 另外算
+  const capBy = await capMedian(w, '產業');
   rows.forEach(r => {
     const b = r.alive_base||0, n = r.alive||0;
     r.cagr = (b && n) ? (Math.pow(n/b, 0.2) - 1) * 100 : null;
@@ -598,7 +597,7 @@ async matrix(f){
     r.suspend_rate  = n ? (r.suspended||0)/n*100 : null;
     r.operating     = r.tax_active||0;
     r.operating_rate = n ? (r.tax_active||0)/n*100 : null;
-    r.capital_median = groupedMedian(capBy[r.name] || {});
+    r.capital_median = capBy[r.name] ?? null;
   });
   return {items:rows, year_now:now, year_base:base};
 },
@@ -616,10 +615,8 @@ async geo(f){
       sum(n) FILTER (WHERE 設立年 BETWEEN ${MINY()} AND ${now-5}) AS coh_n,
       sum(n) FILTER (WHERE 設立年 BETWEEN ${MINY()} AND ${now-5} AND ${SURV5}) AS coh_s
     FROM cube WHERE ${w} AND 縣市 IS NOT NULL GROUP BY 1 ORDER BY 2 DESC`);
-  const capRows = await sql(`SELECT 縣市 AS city, 資本級距 b, sum(n) n FROM cube
-    WHERE ${w} AND 縣市 IS NOT NULL AND 狀態組 = '存續' GROUP BY 1,2`);
-  const capBy = {};
-  capRows.forEach(r => { (capBy[r.city] = capBy[r.city] || {})[r.b] = r.n; });
+  zeroNulls(rows, COUNT_KEYS);
+  const capBy = await capMedian(`${w} AND 縣市 IS NOT NULL`, '縣市');
   const tot = rows.reduce((s,r) => s + (r.alive||0), 0) || 1;
   rows.forEach(r => {
     const b = r.alive_base||0, n = r.alive||0;
@@ -628,7 +625,7 @@ async geo(f){
     r.survival_5y = r.coh_n ? r.coh_s/r.coh_n : null;
     r.suspend_rate = n ? (r.suspended||0)/n*100 : null;
     r.operating_rate = n ? (r.tax_active||0)/n*100 : null;
-    r.cap_med = groupedMedian(capBy[r.city] || {});
+    r.cap_med = capBy[r.city] ?? null;
   });
   const hhi = rows.reduce((s,r) => s + Math.pow(r.alive/tot*100, 2), 0);
   return {cities:rows, hhi, total:tot};
@@ -650,15 +647,11 @@ async capital(f){
     return {label:b.label, min:b.lo, max:b.hi, count:row['c'+b.i]||0,
             cohort:n, survival_5y: n ? (row['s'+b.i]||0)/n : null};
   });
-  // 各年度新設公司的資本中位數（同樣用級距推估）
-  const tr = await sql(`SELECT 設立年 y, 資本級距 b, sum(n) n FROM cube
-    WHERE ${w} AND 設立年 >= ${MINY()} GROUP BY 1,2 ORDER BY 1`);
-  const byY = {};
-  tr.forEach(r => { (byY[r.y] = byY[r.y] || {})[r.b] = r.n; });
-  const trend = Object.keys(byY).sort().map(y => ({
-    year:+y,
-    n: Object.values(byY[y]).reduce((s,v) => s+v, 0),
-    med: groupedMedian(byY[y])}));
+  // 各年度新設公司的資本中位數
+  const tr = await sql(`SELECT 設立年 y, sum(n) n FROM cube
+    WHERE ${w} AND 設立年 >= ${MINY()} GROUP BY 1 ORDER BY 1`);
+  const medY = await medianBy('capdist', '資本', `${w} AND 設立年 >= ${MINY()}`, '設立年');
+  const trend = tr.map(r => ({year:r.y, n:r.n, med:medY[r.y] ?? null}));
   return {buckets, trend,
     note: f.kind === '公司' ? null
         : '行號的資本額商業司未提供，此處採用財政部稅籍登記的資本額；查無稅籍者不列入。'};
@@ -1052,7 +1045,7 @@ async function P1(el){
     ${kpi(`${k.last_year} 年淨增`, sign(k.net_last),
         gr==null?'':`存量年增 ${pctv(gr)}`, (k.net_last>=0?'up':'dn'))}
     ${kpi('五年存活率', pct(k.survival_5y,0), '成立滿 5 年仍存續的比例')}
-    ${kpi('資本額中位數', money(k.capital_median), '存續公司（級距推估）')}
+    ${kpi('資本額中位數', money(k.capital_median), '存續公司')}
     ${kpi('資本額總計', money(k.capital_sum), '存續公司合計')}
   </div>
 
@@ -1115,8 +1108,8 @@ async function P2(el){
     ${kpi('3 年存活率', pct(s['3y'],0),'成立後滿 3 年')}
     ${kpi('5 年存活率', pct(s['5y'],0),'成立後滿 5 年')}
     ${kpi('10 年存活率', pct(s['10y'],0),'成立後滿 10 年')}
-    ${kpi('中位存續年數', s.median_life!=null?s.median_life+' 年':'–',
-        '已消滅公司，精度到年')}
+    ${kpi('中位存續年數', s.median_life!=null?s.median_life.toFixed(1)+' 年':'–',
+        '已消滅公司的存續時間中位數')}
   </div>
 
   <div class="card">
@@ -1137,6 +1130,7 @@ async function P2(el){
       <b>${fmt(c.n1)}</b> 家（淨 ${sign(c.n1-c.n0)}）。
       期末的公司中有 <b>${pct(c.n1?c.born/c.n1:null,0)}</b> 是這段期間才成立的。
     </div>
+    ${c.note?`<div class="note">${esc(c.note)}</div>`:''}
   </div>
 
   <div class="card">
@@ -1466,7 +1460,8 @@ boot().catch(e=>{
     <b>載入失敗</b>：${esc(e.message)}<br><br>
     這個頁面必須透過 http/https 開啟，不能用 file:// 直接雙擊，
     而且需要能連到 cdn.jsdelivr.net 載入查詢引擎。<br>
-    本機測試請執行同資料夾裡的 <code>preview.bat</code>。</div>`;
+    本機測試請在這個資料夾執行 <code>python -m http.server 8080</code>，
+    再開啟 http://127.0.0.1:8080 。</div>`;
 });
 </script>
 </body>
