@@ -64,12 +64,7 @@ python -m http.server 8080
 
 ## 更新資料
 
-這個 repo 只放網站本身。資料是在另一個專案裡產生的，流程如下：
-
-1. `gcis_csv_crawler.py`：從商工行政資料開放平臺下載公司與商業登記 CSV
-2. `build_db.py`：把 CSV 和財政部稅籍資料合併成 DuckDB 資料庫 `gcis.duckdb`
-3. `build_pages_data.py`：從資料庫匯出本 repo 的 `data/`
-4. 把新的 `data/` 上傳到這個 repo，GitHub Pages 會在一兩分鐘內自動更新
+替換 `data/` 下的檔案並推送到這個 repo，GitHub Pages 會在一兩分鐘內自動更新。
 
 `.nojekyll` 不要刪。它會停用 GitHub 的 Jekyll 處理，避免資料檔被略過。
 
