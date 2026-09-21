@@ -359,9 +359,11 @@ async function sql(qs){
   const r = await CONN.query(qs);
   return r.toArray().map(row => {
     const o = row.toJSON();
-    for(const k in o){                       // Arrow 的整數是 BigInt，轉回 Number
+    // Arrow 的 BIGINT 是 BigInt；sum() 的結果是 HUGEINT，會以 Decimal 物件
+    // (Uint32Array) 傳回，不轉的話 a + b 會變成字串串接，數字就全錯了
+    for(const k in o){
       const v = o[k];
-      if(typeof v === 'bigint') o[k] = Number(v);
+      if(typeof v === 'bigint' || ArrayBuffer.isView(v)) o[k] = Number(v);
     }
     return o;
   });
